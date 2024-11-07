@@ -1,0 +1,20 @@
+# AlaCritty configuration file
+
+[window]
+decorations = "Buttonless"                     # Remove window buttons (minimize, maximize, close)
+dimensions = { columns = 133, lines = 40 }     # Set window size to avoid blank edges
+resize_increments = true                       # Resize window in character cell increments
+
+[terminal.shell]
+program = "/opt/homebrew/bin/tmux"             # Path to terminal multiplexer
+args = ["new-session", "-A", "-s", "main"]     # Explanation of args:
+                                               #  new-session = Create new tmux session
+                                               #  -A = Attach if exists, create if doesn't
+                                               #  -s main = Session named "main"
+
+[font]
+size = 14.0
+normal = { family = "JetBrainsMono Nerd Font", style = "Regular" }
+bold = { family = "JetBrainsMono Nerd Font", style = "Bold" }
+italic = { family = "JetBrainsMono Nerd Font", style = "Italic" }
+bold_italic = { family = "JetBrainsMono Nerd Font", style = "Bold Italic" }

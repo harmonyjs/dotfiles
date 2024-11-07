@@ -1,0 +1,9 @@
+# Directories
+\.git
+\.github
+\.idea
+
+# Files
+\.gitignore
+\.instructions
+README\.md
