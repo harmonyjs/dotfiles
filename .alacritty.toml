@@ -1,4 +1,7 @@
-# AlaCritty configuration file
+# Alacritty terminal configuration
+# Author: harmonyjs
+# Features: Integrated with tmux for seamless multiplexing
+# Repository: https://github.com/harmonyjs/dotfiles
 
 [window]
 decorations = "Buttonless"                     # Remove window buttons (minimize, maximize, close)
@@ -6,14 +9,17 @@ dimensions = { columns = 133, lines = 40 }     # Set window size to avoid blank 
 resize_increments = true                       # Resize window in character cell increments
 
 [terminal.shell]
-program = "/opt/homebrew/bin/tmux"             # Path to terminal multiplexer
-args = ["new-session", "-A", "-s", "main"]     # Explanation of args:
-                                               #  new-session = Create new tmux session
-                                               #  -A = Attach if exists, create if doesn't
-                                               #  -s main = Session named "main"
+program = "/opt/homebrew/bin/tmux"                # Path to terminal multiplexer
+args = ["-v", "new-session", "-A", "-s", "main"] # Tmux arguments:
+                                                  #  -v = Verbose logging (for debugging)
+                                                  #  new-session = Create new tmux session
+                                                  #  -A = Attach if exists, create if doesn't
+                                                  #  -s main = Session named "main"
 
 [font]
 size = 14.0
+# JetBrainsMono Nerd Font - includes powerline symbols and icons
+# Install with: brew tap homebrew/cask-fonts && brew install --cask font-jetbrains-mono-nerd-font
 normal = { family = "JetBrainsMono Nerd Font", style = "Regular" }
 bold = { family = "JetBrainsMono Nerd Font", style = "Bold" }
 italic = { family = "JetBrainsMono Nerd Font", style = "Italic" }

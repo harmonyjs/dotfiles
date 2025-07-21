@@ -2,8 +2,11 @@
 \.git
 \.github
 \.idea
+docs
+scripts
 
 # Files
 \.gitignore
-\.instructions
 README\.md
+LICENSE
+.*\.md

@@ -1,4 +1,6 @@
-# Managing aliases in ~/.zsh_aliases
+# Shell Aliases Configuration
+# Author: harmonyjs
+# Repository: https://github.com/harmonyjs/dotfiles
 
 # Basic syntax:
 # alias name='command'
@@ -22,90 +24,12 @@
 # After editing this file, reload aliases with:
 # source ~/.zsh_aliases
 # or
-# . ~/.zsh_aliasesz
+# . ~/.zsh_aliases
 
-# Your aliases below:
+# ═══════════════════════════════════════════════════════════════════
+# Essential Aliases
+# ═══════════════════════════════════════════════════════════════════
 
-function ask() {
-    # Force immediate output flushing
-    exec 1>&1
+alias reload='source ~/.zshrc'
 
-    local environment="$(get_env_info)"
-    local query="$*"
-
-    # Simplified pipeline with direct output
-    echo "$query" | llm -t ask-cli -o temperature 0 -p environment "$environment" | {
-        local skip=1
-        while IFS= read -r line; do
-            if [[ $skip -eq 1 && $line =~ "</analysis>" ]]; then
-                skip=0
-                continue
-            fi
-            if [[ $skip -eq 0 ]]; then
-                echo "$line"
-                command true
-            fi
-        done
-    }
-}
-
-function get_env_info() {
-  # Собираем информацию об ОС
-  local os_name="$(uname -s)"
-  local os_version="$(uname -r)"
-  local architecture="$(uname -m)"
-  
-  # Версии популярных языков
-  local node_version="$(node --version 2>/dev/null || echo 'not installed')"
-  local python_version="$(python3 --version 2>/dev/null | awk '{print $2}' || echo 'not installed')"
-  local java_version="$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}' || echo 'not installed')"
-
-  # Локаль и язык
-  local locale="$(locale | grep LANG= | cut -d= -f2)"
-
-  # Текущая директория
-  local current_directory="$(pwd)"
-
-  # Информация об оболочке
-  local shell_name="$SHELL"
-  local shell_version="$ZSH_VERSION"
-
-  # Переменные окружения
-  local path="$PATH"
-  local node_env="${NODE_ENV:-undefined}"
-  local http_proxy="${http_proxy:-undefined}"
-  local https_proxy="${https_proxy:-undefined}"
-
-  # Размер окна терминала
-  local terminal_size="$(stty size 2>/dev/null || echo 'unknown')"
-
-  # Статус Git
-  if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    local git_branch="$(git rev-parse --abbrev-ref HEAD)"
-    local git_status="$(git status --short)"
-  else
-    local git_branch="not a git repo"
-    local git_status="n/a"
-  fi
-
-  # Выводим информацию в формате JSON через echo
-  echo "{
-    \"os\": \"$os_name\",
-    \"os_version\": \"$os_version\",
-    \"architecture\": \"$architecture\",
-    \"node_version\": \"$node_version\",
-    \"python_version\": \"$python_version\",
-    \"java_version\": \"$java_version\",
-    \"locale\": \"$locale\",
-    \"current_directory\": \"$current_directory\",
-    \"shell\": \"$shell_name\",
-    \"shell_version\": \"$shell_version\",
-    \"path\": \"$path\",
-    \"node_env\": \"$node_env\",
-    \"http_proxy\": \"$http_proxy\",
-    \"https_proxy\": \"$https_proxy\",
-    \"terminal_size\": \"$terminal_size\",
-    \"git_branch\": \"$git_branch\",
-    \"git_status\": \"$git_status\"
-  }"
-}
+# Add your custom aliases below:
