@@ -42,6 +42,38 @@ check ".alacritty.toml symlink" "test -L ~/.alacritty.toml"
 check ".zsh_aliases symlink" "test -L ~/.zsh_aliases"
 
 echo
+echo -e "${BLUE}=== All Dotfiles Symlinks ===${NC}"
+
+# Группируем симлинки по уровням для лучшей читаемости
+echo -e "${YELLOW}Root level (~):${NC}"
+find ~ -maxdepth 1 -type l 2>/dev/null | while read -r link; do
+    target=$(readlink "$link" 2>/dev/null) || continue
+    [[ "$target" == *"dotfiles"* ]] && printf "  %-30s -> %s\n" "$(basename "$link")" "$target"
+done | sort
+
+# Проверяем вложенные директории (до 3 уровней)
+echo
+echo -e "${YELLOW}Nested symlinks:${NC}"
+find ~ -mindepth 2 -maxdepth 3 -type l 2>/dev/null | while read -r link; do
+    target=$(readlink "$link" 2>/dev/null) || continue
+    if [[ "$target" == *"dotfiles"* ]]; then
+        relative="${link#$HOME/}"
+        printf "  %-30s -> %s\n" "$relative" "$target"
+    fi
+done | sort
+
+# Подсчёт для быстрой проверки
+echo
+set +o pipefail
+total=$(find ~ -maxdepth 3 -type l 2>/dev/null | while read -r link; do
+    target=$(readlink "$link" 2>/dev/null)
+    [[ "$target" == *"dotfiles"* ]] && echo "1"
+done | wc -l | tr -d ' ')
+set -o pipefail
+
+echo -e "Total dotfiles symlinks: ${GREEN}${total}${NC}"
+
+echo
 echo -e "${BLUE}=== Tmux Configuration ===${NC}"
 check "Config loads without errors" "tmux start-server && tmux source-file ~/.tmux.conf 2>/dev/null || tmux show -g prefix &>/dev/null"
 check "Prefix key is C-Space" "tmux show -g prefix | grep -q 'C-Space'"

@@ -7,6 +7,11 @@ scripts
 
 # Files
 \.gitignore
+\.gitattributes
+\.gitmodules
 README\.md
 LICENSE
-.*\.md
+AGENTS\.md
+
+# Local configuration files
+.*\.local\.json
