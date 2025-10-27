@@ -57,6 +57,23 @@ case ":$PATH:" in
 esac
 
 #
+# Tmux window title
+# #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+
+# Automatically set tmux window title: show full path for shells, command with args for apps
+if [[ -n "$TMUX" ]]; then
+  precmd() {
+    # For shell prompt: show current directory with ~
+    tmux rename-window "${PWD/#$HOME/~}"
+  }
+  preexec() {
+    # For running command: show command with arguments (first 20 chars)
+    local cmd="${1[0,20]}"
+    tmux rename-window "$cmd"
+  }
+fi
+
+#
 # Bind keys
 # #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
