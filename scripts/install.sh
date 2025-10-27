@@ -64,14 +64,19 @@ fi
 
 echo
 echo "🔗 Creating symlinks with GNU Stow..."
+echo "   Target directory: $HOME"
+echo "   Source directory: $(pwd)"
 
 # Create symlinks
-if stow .; then
+# -v: verbose output
+# -t ~: target is home directory (works regardless of repo location)
+# --no-folding: symlink individual files, not entire directories
+if stow -v -t ~ --no-folding .; then
     echo -e "${GREEN}✓ Symlinks created${NC}"
 else
     echo -e "${RED}❌ Failed to create symlinks${NC}"
     echo "There might be existing files blocking the symlinks"
-    echo "Check for conflicts and try again"
+    echo "Try running: stow -D -v -t ~ --no-folding . && stow -v -t ~ --no-folding ."
     exit 1
 fi
 

@@ -40,6 +40,29 @@ echo -e "${BLUE}=== Symlinks ===${NC}"
 check ".tmux.conf symlink" "test -L ~/.tmux.conf"
 check ".alacritty.toml symlink" "test -L ~/.alacritty.toml"
 check ".zsh_aliases symlink" "test -L ~/.zsh_aliases"
+check ".zshrc symlink" "test -L ~/.zshrc"
+
+# Check for absolute symlinks (should use relative paths)
+echo
+echo -e "${BLUE}=== Symlink Path Validation ===${NC}"
+absolute_symlinks=0
+for file in .tmux.conf .alacritty.toml .zsh_aliases .zshrc; do
+    if [[ -L "$HOME/$file" ]]; then
+        target=$(readlink "$HOME/$file")
+        if [[ "$target" == /* ]]; then
+            echo -e "${RED}✗ $file uses absolute path: $target${NC}"
+            ((absolute_symlinks++))
+            ((failures++))
+        else
+            echo -e "${GREEN}✓ $file uses relative path${NC}"
+        fi
+    fi
+done
+
+if [[ $absolute_symlinks -gt 0 ]]; then
+    echo -e "${YELLOW}⚠️  Found $absolute_symlinks absolute symlink(s)${NC}"
+    echo "   Fix: Run 'stow -D -v -t ~ --no-folding . && stow -v -t ~ --no-folding .'"
+fi
 
 echo
 echo -e "${BLUE}=== All Dotfiles Symlinks ===${NC}"
@@ -96,10 +119,9 @@ check "Copy mode bindings" "tmux list-keys -T copy-mode-vi | grep -E 'v .*begin-
 
 echo
 echo -e "${BLUE}=== Plugins ===${NC}"
-check "Catppuccin theme installed" "test -d ~/.tmux/plugins/catppuccin-tmux"
+check "Catppuccin theme installed" "test -d ~/.tmux/plugins/tmux"
 check "Catppuccin flavor is latte" "tmux show -gv '@catppuccin_flavour' | grep -q latte"
 check "tmux-sensible installed" "test -d ~/.tmux/plugins/tmux-sensible"
-check "vim-tmux-navigator installed" "test -d ~/.tmux/plugins/vim-tmux-navigator"
 check "tmux-yank installed" "test -d ~/.tmux/plugins/tmux-yank"
 
 echo
