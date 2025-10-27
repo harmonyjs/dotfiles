@@ -24,6 +24,10 @@ This is my minimal yet powerful terminal setup for macOS with tmux + Alacritty. 
 
 ```bash
 # Clone repository with submodules
+# You can clone to any location - examples:
+#   ~/dotfiles
+#   ~/Projects/github/dotfiles
+#   ~/dev/dotfiles
 git clone --recurse-submodules https://github.com/harmonyjs/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 
@@ -38,7 +42,9 @@ brew tap homebrew/cask-fonts
 brew install --cask font-jetbrains-mono-nerd-font
 
 # Create symlinks (--no-folding needed for .claude directory)
-stow -v --no-folding .
+# IMPORTANT: -t ~ ensures symlinks are created in home directory
+# This works regardless of where you cloned the repo
+stow -v -t ~ --no-folding .
 
 # Install tmux plugin manager (TPM)
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
@@ -56,10 +62,10 @@ To completely reinstall all symlinks:
 
 ```bash
 # Remove all existing symlinks
-stow -D -v --no-folding .
+stow -D -v -t ~ --no-folding .
 
 # Recreate all symlinks
-stow -v --no-folding .
+stow -v -t ~ --no-folding .
 ```
 
 ### Working with .claude Directory
@@ -70,7 +76,7 @@ The `.claude` directory is a git submodule containing Claude Code configurations
 git submodule update --init .claude
 
 # Create symlinks with --no-folding flag
-stow -v --no-folding .
+stow -v -t ~ --no-folding .
 
 # Verify .claude symlinks
 ls -la ~/.claude/ | grep '\->'
@@ -84,6 +90,56 @@ After installation, simply open Alacritty. It will automatically:
 - Start a tmux session named "main"
 - Apply the Catppuccin Latte theme
 - Enable all configured keybindings
+
+## Daily Usage & Verification
+
+### After Reboot / System Updates
+
+**Good news**: Symlinks are permanent and survive reboots! 🎉
+
+Once you've set up your dotfiles with `stow`, the symlinks persist across:
+- Mac restarts and shutdowns
+- macOS system updates
+- Terminal restarts
+
+Your configuration files will always stay linked to the git repository.
+
+### Quick Health Check
+
+To verify everything is working correctly (useful after reboots or macOS updates):
+
+```bash
+# Navigate to your dotfiles directory
+cd ~/Projects/github/dotfiles  # or wherever you cloned it
+
+# Run the verification script
+./scripts/verify-setup.sh
+```
+
+This script checks:
+- ✓ All required dependencies are installed
+- ✓ Symlinks exist and point to correct files
+- ✓ **Symlinks use relative paths** (not absolute)
+- ✓ Tmux configuration loads without errors
+- ✓ All key bindings are properly configured
+- ✓ Plugins are installed and working
+
+### When to Run Verification
+
+Run `./scripts/verify-setup.sh` when:
+- 🔄 After restarting your Mac (for peace of mind)
+- 📦 After macOS system updates
+- 🤔 Something doesn't work as expected
+- 🔧 After making changes to dotfiles
+
+### If Verification Fails
+
+If checks fail, see the [Troubleshooting](#troubleshooting) section or try:
+
+```bash
+# Recreate all symlinks
+stow -D -v -t ~ --no-folding . && stow -v -t ~ --no-folding .
+```
 
 ## Key Bindings
 
@@ -104,40 +160,67 @@ After installation, simply open Alacritty. It will automatically:
 
 - `.tmux.conf` - Tmux configuration with custom keybindings
 - `.alacritty.toml` - Terminal emulator settings
+- `.zshrc` - ZSH configuration with shared settings (sources `.zsh_aliases` and `.zshrc.local`)
 - `.zsh_aliases` - Useful shell aliases
 - `.claude/` - Git submodule with Claude Code configurations (settings.json, commands/)
+
+### Machine-Specific Configuration
+
+The `.zshrc` file sources `~/.zshrc.local` for machine-specific settings that shouldn't be version controlled. Create this file to add:
+- Company/organization-specific configurations
+- Machine-specific PATH modifications
+- Local development environment settings
+
+Example `~/.zshrc.local`:
+```bash
+# Machine-specific ZSH Configuration
+
+# Custom PATH additions
+export PATH="$PATH:/custom/path/bin"
+
+# Organization-specific settings
+export NODE_EXTRA_CA_CERTS=/path/to/custom/cert
+```
 
 ## Documentation
 
 - [Tmux Reference](docs/TMUX.md) - Key bindings and troubleshooting
 - [Alacritty Integration](docs/ALACRITTY.md) - Tmux integration specifics
 
-## Testing
-
-Run verification script:
-```bash
-./scripts/verify-setup.sh
-```
-
 ## Troubleshooting
 
 ### Symlink Issues
 
+**Problem**: Stow fails with "existing target is not owned by stow" or creates symlinks in wrong directory
+**Cause**: Without `-t ~`, stow uses parent directory of the repo as target
+**Solution**: Always specify target directory with `-t ~`:
+```bash
+stow -v -t ~ --no-folding .
+```
+
 **Problem**: Symlinks in `.claude` are not created properly
 **Solution**: Use `--no-folding` flag:
 ```bash
-stow -v --no-folding .
+stow -v -t ~ --no-folding .
 ```
 
 **Problem**: Stow tries to replace entire `~/.claude` directory
 **Cause**: Without `--no-folding`, Stow attempts to symlink the directory itself
 **Solution**: Always use `--no-folding` when `~/.claude` contains runtime files:
 ```bash
-stow -v --no-folding .
+stow -v -t ~ --no-folding .
 ```
 
-**Problem**: Some symlinks point to wrong paths (relative vs absolute)
-**Solution**: This is normal - stow creates relative symlinks from target directory
+**Problem**: Some symlinks use absolute paths instead of relative
+**Cause**: Manual symlink creation or old stow version
+**Solution**: Remove absolute symlinks and recreate with stow:
+```bash
+# Example: remove absolute .zshrc symlink
+rm ~/.zshrc
+
+# Recreate with stow (creates relative symlink)
+stow -v -t ~ --no-folding .
+```
 
 ### Checking Symlink Status
 ```bash
@@ -152,7 +235,10 @@ find ~/.claude -type l ! -exec test -e {} \; -print
 ```
 
 ### Verification
-Always run the verification script after making changes:
+
+To verify your setup is working correctly, see the [Daily Usage & Verification](#daily-usage--verification) section.
+
+Quick command:
 ```bash
 ./scripts/verify-setup.sh
 ```
@@ -161,8 +247,11 @@ Always run the verification script after making changes:
 
 To remove all symlinks:
 ```bash
-cd ~/dotfiles
-stow -D -v --no-folding .
+# Navigate to your dotfiles directory (adjust path if needed)
+cd ~/Projects/github/dotfiles
+
+# Remove all symlinks
+stow -D -v -t ~ --no-folding .
 ```
 
 ## License
