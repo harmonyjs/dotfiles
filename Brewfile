@@ -15,6 +15,9 @@
 #   brew bundle dump --force       Regenerate Brewfile from installed packages
 #   brew bundle dump --describe    Include package descriptions (one-time)
 #
+# Example:
+#   brew bundle --file=~/GitHub/dotfiles/Brewfile
+#
 # =============================================================================
 
 # Repositories
