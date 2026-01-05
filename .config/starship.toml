@@ -1,0 +1,113 @@
+# Starship Configuration
+# Migrated from Powerlevel10k lean style
+
+# Prompt format (two lines)
+format = """
+$directory\
+$git_branch\
+$git_status\
+$fill\
+$status\
+$cmd_duration\
+$jobs\
+$nodejs\
+$python\
+$line_break\
+$character"""
+
+# Empty line before prompt (like p10k)
+add_newline = true
+
+# Filler between left and right sections
+[fill]
+symbol = "·"
+style = "bright-black"
+
+# Directory
+[directory]
+truncation_length = 3
+truncate_to_repo = false
+style = "cyan"
+format = "[$path]($style)[$read_only]($read_only_style) "
+read_only = " "
+read_only_style = "red"
+
+# Git branch
+[git_branch]
+symbol = ""
+style = "green"
+format = "[$symbol$branch(:$remote_branch)]($style) "
+
+# Git status
+[git_status]
+format = '([$all_status$ahead_behind]($style) )'
+style = "green"
+conflicted = "~"
+ahead = "⇡"
+behind = "⇣"
+diverged = "⇕"
+up_to_date = ""
+untracked = "[?${count}](blue)"
+stashed = "[*${count}](green)"
+modified = "[!${count}](yellow)"
+staged = "[+${count}](green)"
+renamed = "[»${count}](yellow)"
+deleted = "[✘${count}](red)"
+
+# Prompt character
+[character]
+success_symbol = "[❯](green)"
+error_symbol = "[❯](red)"
+vimcmd_symbol = "[❮](green)"
+vimcmd_visual_symbol = "[V](green)"
+
+# Command execution time
+[cmd_duration]
+min_time = 3000  # 3 seconds (like p10k)
+style = "yellow"
+format = "[$duration]($style) "
+
+# Exit status
+[status]
+disabled = false
+format = "[$symbol$status]($style) "
+symbol = "✘ "
+style = "red"
+
+# Background jobs
+[jobs]
+symbol = "✦"
+style = "blue"
+format = "[$symbol$number]($style) "
+
+# Node.js (nvm)
+[nodejs]
+symbol = " "
+style = "green"
+format = "[$symbol($version)]($style) "
+detect_files = ["package.json", ".nvmrc", ".node-version"]
+detect_folders = ["node_modules"]
+
+# Python (virtualenv)
+[python]
+symbol = " "
+style = "yellow"
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+detect_extensions = ["py"]
+detect_files = [".python-version", "Pipfile", "pyproject.toml", "requirements.txt", "setup.py", "tox.ini"]
+
+# Disable unused modules for performance
+[aws]
+disabled = true
+
+[gcloud]
+disabled = true
+
+[kubernetes]
+disabled = true
+
+[docker_context]
+disabled = true
+
+[package]
+disabled = true
