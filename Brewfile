@@ -20,9 +20,6 @@
 #
 # =============================================================================
 
-# Repositories
-tap "homebrew/services"  # Provides `brew services` command for managing background services
-
 # System utilities
 brew "stow"              # GNU Stow: symlink farm manager for dotfiles
 cask "raycast"           # Spotlight replacement with extensions and productivity features
