@@ -18,6 +18,9 @@ $character"""
 # Empty line before prompt (like p10k)
 add_newline = true
 
+# Timeout for commands (default 500ms, increased for fnm auto-install)
+command_timeout = 5000
+
 # Filler between left and right sections
 [fill]
 symbol = "·"
@@ -80,7 +83,7 @@ symbol = "✦"
 style = "blue"
 format = "[$symbol$number]($style) "
 
-# Node.js (nvm)
+# Node.js (fnm)
 [nodejs]
 symbol = " "
 style = "green"
