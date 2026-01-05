@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# =============================================================================
+# dry-run - Preview what init would do
+# =============================================================================
+# Usage: ./scripts/dry-run [--verbose|-v]
+#
+# This is a convenience wrapper that runs init with --dry-run flag.
+# Shows what actions would be taken without making any changes.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Forward all arguments plus --dry-run
+exec "$SCRIPT_DIR/init" --dry-run "$@"

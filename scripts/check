@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# =============================================================================
+# check - Verify dotfiles setup
+# =============================================================================
+# Usage: ./scripts/check [--verbose|-v]
+#
+# This script only checks, it never modifies anything.
+# Exit code 0 = all checks passed
+# Exit code 1 = some checks failed
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source library files
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/deps.sh"
+source "$SCRIPT_DIR/lib/submodules.sh"
+source "$SCRIPT_DIR/lib/symlinks.sh"
+source "$SCRIPT_DIR/lib/tmux.sh"
+
+# Help message
+show_help() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Verify dotfiles setup.
+
+Options:
+    -v, --verbose    Show detailed output for each check
+    -h, --help       Show this help message
+
+Examples:
+    ./scripts/check              # Quick summary
+    ./scripts/check --verbose    # Detailed output
+EOF
+}
+
+# Parse command line arguments
+parse_args "$@"
+
+# =============================================================================
+# Main
+# =============================================================================
+
+echo "Checking dotfiles setup..."
+echo
+
+# Check we're in the right directory
+check_dotfiles_dir
+
+# Track totals
+total_passed=0
+total_checks=0
+sections_failed=0
+
+# Helper to parse "passed/total" format
+parse_result() {
+    local result="$1"
+    local passed="${result%/*}"
+    local total="${result#*/}"
+    echo "$passed $total"
+}
+
+# Helper to print section result
+print_section_result() {
+    local name="$1"
+    local result="$2"
+    local passed total
+
+    read -r passed total <<< "$(parse_result "$result")"
+
+    ((total_passed += passed)) || true
+    ((total_checks += total)) || true
+
+    if [[ "$passed" -eq "$total" ]]; then
+        printf "%-20s [%s] ${GREEN}✓${NC}\n" "$name" "$result"
+    else
+        printf "%-20s [%s] ${RED}✗${NC}\n" "$name" "$result"
+        ((sections_failed++)) || true
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Brewfile
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Brewfile"
+fi
+
+brewfile_result="0/1"
+if [[ -f "$BREWFILE" ]]; then
+    brewfile_ok=false
+    check_brewfile && brewfile_ok=true
+
+    if [[ "$brewfile_ok" == "true" ]]; then
+        brewfile_result="1/1"
+        if [[ "$VERBOSE" == "true" ]]; then
+            log_success "All packages installed"
+        fi
+    else
+        # Show which packages are missing
+        log_error "Some Brewfile packages missing"
+        if [[ "$VERBOSE" == "true" ]]; then
+            brew bundle check --file="$BREWFILE" --verbose 2>&1 | grep "^→" | while read -r line; do
+                echo "  $line"
+            done
+        fi
+    fi
+else
+    log_warning "Brewfile not found"
+    brewfile_result="0/0"
+fi
+
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Brewfile" "$brewfile_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$brewfile_result")"
+((total_passed += passed)) || true || true
+((total_checks += total)) || true || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true || true
+
+# -----------------------------------------------------------------------------
+# Submodules
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Submodules"
+fi
+
+submodules_result=$(check_all_submodules)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Submodules" "$submodules_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$submodules_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Symlinks
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Symlinks"
+fi
+
+symlinks_result=$(check_all_symlinks)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Symlinks" "$symlinks_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$symlinks_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Tmux Config
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Tmux Config"
+fi
+
+tmux_result=$(check_tmux_config)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Tmux config" "$tmux_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$tmux_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Plugins
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Plugins"
+fi
+
+plugins_result=$(check_plugins)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Plugins" "$plugins_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$plugins_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Key Bindings
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Key Bindings"
+fi
+
+keys_result=$(check_keybindings)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Key bindings" "$keys_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$keys_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Private Symlinks (optional)
+# -----------------------------------------------------------------------------
+private_result=$(check_private_symlinks)
+read -r passed total <<< "$(parse_result "$private_result")"
+
+if [[ "$total" -gt 0 ]]; then
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_section "Private Symlinks"
+    fi
+
+    if [[ "$VERBOSE" != "true" ]]; then
+        print_section_result "Private symlinks" "$private_result"
+    else
+        echo
+    fi
+
+    ((total_passed += passed)) || true
+    ((total_checks += total)) || true
+    [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+fi
+
+# -----------------------------------------------------------------------------
+# Summary
+# -----------------------------------------------------------------------------
+echo
+print_separator
+
+if [[ $sections_failed -eq 0 ]]; then
+    echo -e "${GREEN}All $total_checks checks passed${NC}"
+    exit 0
+else
+    echo -e "${RED}$((total_checks - total_passed)) of $total_checks checks failed${NC}"
+    echo
+    echo "Run ./scripts/init to fix automatically"
+    exit 1
+fi

@@ -1,0 +1,305 @@
+#!/usr/bin/env bash
+# deps.sh - Dependency management functions
+# This file should be sourced, not executed directly
+
+# Prevent direct execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "This script should be sourced, not executed directly"
+    exit 1
+fi
+
+# =============================================================================
+# Required Dependencies
+# =============================================================================
+
+# Core dependencies (for verification)
+REQUIRED_DEPS=(git tmux stow starship)
+OPTIONAL_DEPS=(alacritty)
+
+# Brewfile location
+BREWFILE="$DOTFILES_DIR/Brewfile"
+
+# =============================================================================
+# Homebrew Functions
+# =============================================================================
+
+# Check if Homebrew is available
+check_brew_available() {
+    command -v brew &>/dev/null
+}
+
+# Ensure Homebrew is available (exit if not)
+ensure_brew() {
+    if check_brew_available; then
+        log_success "Homebrew found"
+        return 0
+    fi
+
+    log_error "Homebrew not found"
+    echo
+    echo "Homebrew is required to install dependencies."
+    echo "Install it from: https://brew.sh"
+    echo
+    echo "Run this command:"
+    echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+    exit 1
+}
+
+# =============================================================================
+# Dependency Check Functions
+# =============================================================================
+
+# Check if a dependency is installed
+# Returns 0 if installed, 1 if not
+check_dependency() {
+    local dep="$1"
+    command -v "$dep" &>/dev/null
+}
+
+# Check tmux version (requires 3.2+)
+check_tmux_version() {
+    if ! check_dependency tmux; then
+        return 1
+    fi
+    tmux -V | grep -Eq 'tmux 3\.[2-9]|tmux [4-9]'
+}
+
+# =============================================================================
+# Dependency Installation Functions
+# =============================================================================
+
+# Install a dependency via brew
+install_dependency() {
+    local dep="$1"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    brew install "$dep" 2>&1 | while read -r line; do
+        log_verbose "$line"
+    done
+
+    # Check if installation succeeded
+    check_dependency "$dep"
+}
+
+# Ensure a dependency is installed (install if not)
+ensure_dependency() {
+    local dep="$1"
+    local version
+
+    if check_dependency "$dep"; then
+        version=$(get_version "$dep")
+        if [[ "$VERBOSE" == "true" ]]; then
+            log_success "$dep ($version)"
+        fi
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "$dep — would install via brew"
+        return 0
+    fi
+
+    log_warning "$dep not installed"
+    log_action "Installing..."
+
+    if install_dependency "$dep"; then
+        version=$(get_version "$dep")
+        log_success "$dep ($version)"
+        return 0
+    else
+        log_error "$dep — installation failed"
+        return 1
+    fi
+}
+
+# =============================================================================
+# Brewfile Functions
+# =============================================================================
+
+# Check if all Brewfile packages are installed
+check_brewfile() {
+    if [[ ! -f "$BREWFILE" ]]; then
+        return 1
+    fi
+    if brew bundle check --file="$BREWFILE" &>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Install packages from Brewfile
+run_brew_bundle() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    brew bundle --file="$BREWFILE" 2>&1 | while read -r line; do
+        # Show installing/upgrading progress
+        if [[ "$line" =~ ^Installing|^Upgrading ]]; then
+            echo -e "  ${DIM}→${NC} $line"
+        elif [[ "$VERBOSE" == "true" ]]; then
+            log_verbose "$line"
+        fi
+    done
+}
+
+# Ensure all Brewfile packages are installed
+ensure_brewfile() {
+    if [[ ! -f "$BREWFILE" ]]; then
+        log_warning "Brewfile not found"
+        return 1
+    fi
+
+    if check_brewfile; then
+        log_success "All Brewfile packages installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "Brewfile packages — would install via brew bundle"
+        return 0
+    fi
+
+    log_warning "Some Brewfile packages missing"
+    log_action "Running brew bundle..."
+
+    if run_brew_bundle && check_brewfile; then
+        log_success "Brewfile packages installed"
+        return 0
+    else
+        log_error "brew bundle failed"
+        return 1
+    fi
+}
+
+# =============================================================================
+# Main Dependencies Function
+# =============================================================================
+
+# Ensure all required dependencies are installed
+ensure_all_dependencies() {
+    local failed=0
+
+    # Use Brewfile if available
+    if [[ -f "$BREWFILE" ]]; then
+        if ! ensure_brewfile; then
+            ((failed++))
+        fi
+    else
+        # Fallback to individual installs
+        for dep in "${REQUIRED_DEPS[@]}"; do
+            if ! ensure_dependency "$dep"; then
+                ((failed++))
+            fi
+        done
+    fi
+
+    # Special check for tmux version
+    if check_dependency tmux && ! check_tmux_version; then
+        log_warning "tmux version too old (requires 3.2+)"
+        if [[ "$DRY_RUN" != "true" ]]; then
+            log_action "Upgrading..."
+            brew upgrade tmux 2>&1 | while read -r line; do
+                log_verbose "$line"
+            done
+        fi
+    fi
+
+    return $failed
+}
+
+# =============================================================================
+# Font Installation
+# =============================================================================
+
+# Check if JetBrainsMono Nerd Font is installed
+check_nerd_font() {
+    # Check in user fonts directory
+    if ls ~/Library/Fonts/JetBrainsMono*.ttf &>/dev/null; then
+        return 0
+    fi
+    # Check in system fonts directory
+    if ls /Library/Fonts/JetBrainsMono*.ttf &>/dev/null; then
+        return 0
+    fi
+    # Check via fc-list if available
+    if command -v fc-list &>/dev/null; then
+        fc-list | grep -qi "JetBrainsMono Nerd Font" && return 0
+    fi
+    return 1
+}
+
+# Install Nerd Font via brew cask
+install_nerd_font() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    # Tap the fonts cask if needed
+    brew tap homebrew/cask-fonts 2>/dev/null || true
+
+    brew install --cask font-jetbrains-mono-nerd-font 2>&1 | while read -r line; do
+        log_verbose "$line"
+    done
+
+    check_nerd_font
+}
+
+# Ensure Nerd Font is installed
+ensure_nerd_font() {
+    if check_nerd_font; then
+        log_success "Nerd Font installed"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "JetBrainsMono Nerd Font — would install"
+        return 0
+    fi
+
+    log_warning "Nerd Font not installed"
+    log_action "Installing JetBrainsMono Nerd Font..."
+
+    if install_nerd_font; then
+        log_success "Font installed"
+        return 0
+    else
+        log_warning "Font installation failed (optional)"
+        return 0  # Non-fatal
+    fi
+}
+
+# =============================================================================
+# Summary Functions
+# =============================================================================
+
+# Print a compact summary of all dependencies
+print_deps_summary() {
+    local installed=()
+    local missing=()
+
+    for dep in "${REQUIRED_DEPS[@]}"; do
+        if check_dependency "$dep"; then
+            installed+=("$dep")
+        else
+            missing+=("$dep")
+        fi
+    done
+
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        local deps_str
+        deps_str=$(printf '%s, ' "${installed[@]}" | sed 's/, $//')
+        log_success "$deps_str"
+    else
+        for dep in "${installed[@]}"; do
+            log_success "$dep"
+        done
+        for dep in "${missing[@]}"; do
+            log_error "$dep — missing"
+        done
+    fi
+}

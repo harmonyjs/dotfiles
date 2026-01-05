@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# =============================================================================
+# update - Update dotfiles from remote
+# =============================================================================
+# Usage: ./scripts/update [--verbose|-v]
+#
+# Fetches latest changes from origin, pulls if possible,
+# and updates submodules.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source library files
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/submodules.sh"
+
+# Help message
+show_help() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Update dotfiles from remote repository.
+
+Options:
+    -v, --verbose    Show detailed output
+    -h, --help       Show this help message
+
+Examples:
+    ./scripts/update              # Standard update
+    ./scripts/update --verbose    # With detailed output
+EOF
+}
+
+# Parse command line arguments
+parse_args "$@"
+
+# =============================================================================
+# Main
+# =============================================================================
+
+echo "Updating dotfiles..."
+echo
+
+# Check we're in the right directory
+check_dotfiles_dir
+
+cd "$DOTFILES_DIR"
+
+# Track if anything changed
+changes_made=false
+
+# -----------------------------------------------------------------------------
+# Fetch
+# -----------------------------------------------------------------------------
+log_section "Fetching updates"
+
+if git fetch origin 2>&1 | while read -r line; do
+    log_verbose "$line"
+done; then
+    log_success "Fetched from origin"
+else
+    log_error "Failed to fetch from origin"
+    exit 1
+fi
+
+# Check if there are updates
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "$LOCAL")
+
+if [[ "$LOCAL" == "$REMOTE" ]]; then
+    log_success "Already up to date"
+else
+    # Show new commits
+    log_section "New commits"
+    git log --oneline HEAD.."$REMOTE" | while read -r line; do
+        echo "  $line"
+    done
+
+    # Pull changes
+    log_section "Pulling changes"
+
+    if git pull --ff-only 2>&1 | while read -r line; do
+        log_verbose "$line"
+    done; then
+        count=$(git rev-list --count "$LOCAL".."$REMOTE")
+        log_success "$count commits applied"
+        changes_made=true
+    else
+        log_error "Pull failed (try: git pull manually)"
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
+# Submodules
+# -----------------------------------------------------------------------------
+log_section "Submodules"
+
+update_all_submodules
+submodule_changes=$?
+
+if [[ $submodule_changes -gt 0 ]]; then
+    changes_made=true
+fi
+
+# -----------------------------------------------------------------------------
+# Summary
+# -----------------------------------------------------------------------------
+echo
+print_separator
+
+if [[ "$changes_made" == "true" ]]; then
+    echo -e "${GREEN}Updates applied!${NC}"
+    echo
+    echo "Run ./scripts/init to apply configuration changes"
+else
+    echo -e "${GREEN}No updates available${NC}"
+fi

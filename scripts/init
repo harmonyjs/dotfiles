@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# =============================================================================
+# init - Initialize or repair dotfiles setup
+# =============================================================================
+# Usage: ./scripts/init [--verbose|-v] [--dry-run|-n]
+#
+# This script is idempotent - safe to run multiple times.
+# It will install dependencies, initialize submodules, create symlinks,
+# and set up tmux plugins.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source library files
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/deps.sh"
+source "$SCRIPT_DIR/lib/submodules.sh"
+source "$SCRIPT_DIR/lib/symlinks.sh"
+source "$SCRIPT_DIR/lib/tmux.sh"
+
+# Help message
+show_help() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Initialize or repair dotfiles setup.
+
+Options:
+    -v, --verbose    Show detailed output
+    -n, --dry-run    Preview what would be done without making changes
+    -h, --help       Show this help message
+
+Examples:
+    ./scripts/init              # Standard initialization
+    ./scripts/init --verbose    # With detailed output
+    ./scripts/init --dry-run    # Preview mode
+EOF
+}
+
+# Parse command line arguments
+parse_args "$@"
+
+# =============================================================================
+# Main
+# =============================================================================
+
+echo "Initializing dotfiles..."
+echo
+
+# Check we're in the right directory
+check_dotfiles_dir
+
+# Track failures
+failed=0
+
+# -----------------------------------------------------------------------------
+# Homebrew (required)
+# -----------------------------------------------------------------------------
+log_section "Homebrew"
+ensure_brew
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+log_section "Dependencies"
+
+if ! ensure_all_dependencies; then
+    ((failed++))
+fi
+
+# -----------------------------------------------------------------------------
+# Submodules
+# -----------------------------------------------------------------------------
+log_section "Submodules"
+if ! ensure_all_submodules; then
+    ((failed++))
+fi
+
+# -----------------------------------------------------------------------------
+# Setup
+# -----------------------------------------------------------------------------
+log_section "Setup"
+
+# TPM
+if ! ensure_tpm; then
+    ((failed++))
+fi
+
+# Symlinks
+if ! ensure_all_symlinks; then
+    ((failed++))
+fi
+
+# Plugins
+ensure_plugins
+
+# Load config
+ensure_config_loaded
+
+# -----------------------------------------------------------------------------
+# Summary
+# -----------------------------------------------------------------------------
+echo
+print_separator
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo "Dry-run complete. Run without --dry-run to apply changes."
+elif [[ $failed -eq 0 ]]; then
+    echo -e "${GREEN}Setup complete!${NC} Open Alacritty to start."
+else
+    echo -e "${RED}Setup completed with $failed errors${NC}"
+    echo "Run ./scripts/check for details"
+    exit 1
+fi
