@@ -80,6 +80,44 @@ else
     exit 1
 fi
 
+# Handle private submodule if present
+echo
+if [[ -d ".private" ]]; then
+    echo "🔐 Private dotfiles submodule detected..."
+
+    # Recursively backup ALL files from .private that exist in ~ as regular files
+    # Uses find to handle nested directories like .config/app/settings.json
+    while IFS= read -r -d '' file; do
+        # Get relative path from .private (e.g., .zshrc.local or .config/app/file)
+        relpath="${file#.private/}"
+        target="$HOME/$relpath"
+
+        if [[ -f "$target" ]] && [[ ! -L "$target" ]]; then
+            echo "   Backing up existing ~/$relpath..."
+            mv "$target" "$target.backup.$(date +%Y%m%d-%H%M%S)"
+        fi
+    done < <(find .private -type f \
+        ! -path '*/.git/*' \
+        ! -name '.git' \
+        ! -name '.gitignore' \
+        ! -name '.gitattributes' \
+        ! -name '.stow-local-ignore' \
+        ! -name 'README.md' \
+        ! -name '*.backup.*' \
+        ! -path '*/scripts/*' \
+        -print0)
+
+    if stow -v -t ~ --no-folding -d .private .; then
+        echo -e "${GREEN}✓ Private symlinks created (with priority)${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Failed to create private symlinks${NC}"
+        echo "   Try: stow -D -v -t ~ --no-folding -d .private . && stow -v -t ~ --no-folding -d .private ."
+    fi
+else
+    echo -e "${YELLOW}ℹ️  No .private submodule found (optional)${NC}"
+    echo "   To add private dotfiles: git submodule update --init .private"
+fi
+
 echo
 echo "🎨 Checking font installation..."
 

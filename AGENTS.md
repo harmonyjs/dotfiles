@@ -60,4 +60,6 @@ When troubleshooting problems with the dotfiles setup, you should:
 - **Symlink Paths**: Ensure symlinks use relative paths, never absolute paths
 - **Machine-Specific Files**: Preserve `*.local` pattern files (.zshrc.local, *.local.json) - never modify or version control them
 - **Stow Ignore Respect**: Never modify `.stow-local-ignore` without understanding symlink implications
+- **Private Submodule Priority**: When modifying stow configuration, maintain priority order: public first, then private (`.private/` is stowed separately)
+- **Optional Submodules**: `.private/` submodule is optional - scripts must handle its absence gracefully
 

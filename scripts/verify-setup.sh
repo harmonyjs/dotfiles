@@ -65,6 +65,49 @@ if [[ $absolute_symlinks -gt 0 ]]; then
 fi
 
 echo
+echo -e "${BLUE}=== Private Symlinks (optional) ===${NC}"
+DOTFILES_DIR=$(dirname "$(dirname "$(readlink -f "$0")")")
+if [[ -d "$DOTFILES_DIR/.private" ]]; then
+    # Recursively check ALL files from .private (supports nested dirs like .config/app/)
+    private_count=0
+    private_errors=0
+
+    while IFS= read -r -d '' file; do
+        # Get relative path from .private
+        relpath="${file#$DOTFILES_DIR/.private/}"
+        target="$HOME/$relpath"
+
+        if [[ -L "$target" ]]; then
+            link_target=$(readlink "$target")
+            if [[ "$link_target" == *".private"* ]]; then
+                echo -e "  ${GREEN}✓${NC} ~/$relpath"
+                ((private_count++))
+            else
+                echo -e "  ${RED}✗${NC} ~/$relpath -> wrong target: $link_target"
+                ((private_errors++))
+            fi
+        else
+            echo -e "  ${RED}✗${NC} ~/$relpath is not a symlink"
+            ((private_errors++))
+        fi
+    done < <(find "$DOTFILES_DIR/.private" -type f \
+        ! -path '*/.git/*' \
+        ! -name '.git' \
+        ! -name '.gitignore' \
+        ! -name '.gitattributes' \
+        ! -name '.stow-local-ignore' \
+        ! -name 'README.md' \
+        ! -name '*.backup.*' \
+        ! -path '*/scripts/*' \
+        -print0)
+
+    echo "  Total: $private_count symlinks, $private_errors errors"
+    ((failures += private_errors)) || true
+else
+    echo -e "${YELLOW}ℹ️  Private submodule not installed (optional)${NC}"
+fi
+
+echo
 echo -e "${BLUE}=== All Dotfiles Symlinks ===${NC}"
 
 # Группируем симлинки по уровням для лучшей читаемости

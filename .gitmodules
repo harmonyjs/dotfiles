@@ -2,3 +2,6 @@
 	path = .claude
 	url = https://github.com/harmonyjs/.claude
 	branch = main
+[submodule ".private"]
+	path = .private
+	url = https://github.com/harmonyjs/dotfiles-private.git

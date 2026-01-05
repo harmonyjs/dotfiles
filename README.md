@@ -84,6 +84,28 @@ ls -la ~/.claude/ | grep '\->'
 
 **Important**: The `--no-folding` flag tells Stow to symlink individual files within directories rather than symlinking entire directories. This preserves existing runtime directories in `~/.claude` while symlinking only the configuration files (settings.json, commands/, CLAUDE.md). Local configuration files (*.local.json) are ignored and should remain local to each machine.
 
+### Private Dotfiles (`.private/`)
+
+Optional git submodule for machine-specific private configurations that shouldn't be public:
+
+- `.zshrc.local` - Machine-specific zsh configuration
+- `.zsh_history` - Shell command history
+- Any nested directories like `.config/app/` are also supported
+
+**Installation:**
+```bash
+# Initialize private submodule (requires GitHub auth)
+git submodule update --init .private
+
+# Private symlinks are created automatically by install.sh
+# Or manually with priority over public files:
+stow -v -t ~ --no-folding -d .private .
+```
+
+**Priority**: Private files override public files when conflicts exist. The install script applies public symlinks first, then private symlinks with priority.
+
+**Note**: `.zsh_history` is symlinked and will show as "modified" in git status after each shell command. This is expected behavior.
+
 ## Quick Start
 
 After installation, simply open Alacritty. It will automatically:
@@ -163,6 +185,7 @@ stow -D -v -t ~ --no-folding . && stow -v -t ~ --no-folding .
 - `.zshrc` - ZSH configuration with shared settings (sources `.zsh_aliases` and `.zshrc.local`)
 - `.zsh_aliases` - Useful shell aliases
 - `.claude/` - Git submodule with Claude Code configurations (settings.json, commands/)
+- `.private/` - Optional git submodule with private configurations (`.zshrc.local`, `.zsh_history`)
 
 ### Machine-Specific Configuration
 

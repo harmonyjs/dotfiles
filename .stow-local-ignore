@@ -16,3 +16,6 @@ AGENTS\.md
 # Local configuration files
 .*\.local\.json
 \.zshrc\.local
+
+# Private submodule (stowed separately)
+\.private
