@@ -40,3 +40,4 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 - Maintain macOS + Homebrew compatibility
 - Always use stow for symlink management
 - Create backups before config modifications
+- NEVER create symlinks manually, stow has to manage them
