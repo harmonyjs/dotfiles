@@ -21,8 +21,33 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 
 - `.tmux.conf` - tmux config (prefix: `Ctrl+Space`)
 - `.alacritty.toml` - terminal with auto-start tmux session "main"
-- `.zshrc` - shell config (sources `.zsh_aliases` and `.zshrc.local`)
+- `.zshenv` - environment variables and PATH (loaded always)
+- `.zprofile` - login shell config (intentionally empty)
+- `.zshrc` - interactive shell config (sources `.zsh_aliases` and `.zshrc.local`)
 - `.zsh_aliases` - command aliases
+
+## ZSH Configuration Rules
+
+ZSH files have strict separation of concerns. Follow these rules when modifying shell configuration:
+
+| What to add | Where to put it |
+|-------------|-----------------|
+| PATH modifications | `.zshenv` |
+| Environment variables (`export VAR=value`) | `.zshenv` |
+| Prompt configuration | `.zshrc` |
+| Completion setup | `.zshrc` |
+| Key bindings | `.zshrc` |
+| Aliases and functions | `.zsh_aliases` |
+| Interactive utilities (fzf, zoxide) | `.zshrc` |
+| Machine-specific settings | `.zshrc.local` (not version controlled) |
+
+**Loading order:** `.zshenv` → `.zprofile` → `.zshrc`
+
+**Critical rules:**
+- NEVER add PATH or environment variables to `.zshrc` — they won't be available in scripts/cron
+- NEVER add interactive features to `.zshenv` — it runs for non-interactive shells too
+- Keep `.zprofile` empty — all PATH setup is in `.zshenv` for universal availability
+- Use `.zshrc.local` for machine-specific environment variables (like `NODE_EXTRA_CA_CERTS`)
 
 ## Development Principles
 

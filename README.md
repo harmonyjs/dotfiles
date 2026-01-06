@@ -85,6 +85,22 @@ just init --dry-run     # Same as just preview
 - `.claude/` - Git submodule with Claude Code configurations
 - `.private/` - Optional git submodule for private configurations
 
+### ZSH Configuration Files
+
+ZSH loads configuration files in a specific order. This repository follows a clear separation of concerns:
+
+| File | When Loaded | Purpose |
+|------|-------------|---------|
+| `.zshenv` | Always (all shells) | PATH and environment variables |
+| `.zprofile` | Login shells only | Empty (reserved for login-only setup) |
+| `.zshrc` | Interactive shells | Prompt, completion, aliases, utilities |
+
+**Why this structure?**
+
+- **`.zshenv`** runs for every shell invocation — interactive terminals, scripts, cron jobs. All PATH modifications (Homebrew, cargo, pnpm) and environment variables (proxy settings) live here for universal availability.
+- **`.zprofile`** is intentionally empty. Everything that might be needed in non-login shells has been moved to `.zshenv`.
+- **`.zshrc`** contains interactive-only features: prompt (Starship), completion, key bindings, shell utilities (fzf, zoxide), and sources aliases.
+
 ### Machine-Specific Configuration
 
 The `.zshrc` file sources `~/.zshrc.local` for machine-specific settings. Create this file for:
