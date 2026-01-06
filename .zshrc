@@ -41,6 +41,9 @@ _fnm_autoload() { fnm use --install-if-missing --silent-if-unchanged 2>/dev/null
 add-zsh-hook chpwd _fnm_autoload
 _fnm_autoload
 
+# Doppler
+eval "$(doppler completion zsh)"
+
 # pnpm
 export PNPM_HOME="$HOME/Library/pnpm"
 case ":$PATH:" in

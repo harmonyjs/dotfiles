@@ -47,6 +47,11 @@ brew "neovim"            # Modern vim-based extensible text editor
 # Version control
 brew "gh"                # GitHub CLI for issues, PRs, and repository management
 
+# Security / Secrets
+brew "gnupg"                     # GnuPG for encryption (required for Doppler signature verification)
+tap "dopplerhq/cli"
+brew "doppler"                   # Doppler CLI for secrets management
+
 # Languages and runtimes
 brew "go"                # Go programming language compiler and tools
 brew "pipx"              # Install and run Python CLI applications in isolated environments
