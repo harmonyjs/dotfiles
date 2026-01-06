@@ -19,10 +19,10 @@ This is my minimal yet powerful terminal setup for macOS with tmux + Alacritty. 
 ```bash
 git clone https://github.com/harmonyjs/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-./scripts/init
+just init
 ```
 
-That's it! The `init` script handles everything automatically:
+That's it! The `init` command handles everything automatically:
 - Installs all packages from `Brewfile` via `brew bundle`
 - Initializes git submodules
 - Creates all symlinks
@@ -32,10 +32,15 @@ That's it! The `init` script handles everything automatically:
 
 | Command | Description |
 |---------|-------------|
-| `./scripts/init` | Initialize or repair setup |
-| `./scripts/check` | Verify configuration |
-| `./scripts/dry-run` | Preview what init would do |
-| `./scripts/update` | Pull latest updates |
+| `just init` | Initialize or repair setup |
+| `just check` | Verify configuration |
+| `just preview` | Preview what init would do |
+| `just update` | Pull latest updates |
+| `just stow` | Apply symlinks via stow |
+| `just brew` | Install Brewfile packages |
+| `just tmux-reload` | Reload tmux configuration |
+
+Run `just` to see all available commands.
 
 ### Command Options
 
@@ -45,8 +50,8 @@ All commands support these flags:
 
 Examples:
 ```bash
-./scripts/check --verbose    # Detailed verification
-./scripts/init --dry-run     # Same as ./scripts/dry-run
+just check --verbose    # Detailed verification
+just init --dry-run     # Same as just preview
 ```
 
 ## Key Bindings
@@ -113,11 +118,11 @@ The `.private/` submodule contains machine-specific private configurations:
 - `.zshrc.local` - Machine-specific zsh configuration
 - `.zsh_history` - Shell command history
 
-Private files are handled automatically by `./scripts/init`. If you have access to the private repository, initialize it manually:
+Private files are handled automatically by `just init`. If you have access to the private repository, initialize it manually:
 
 ```bash
 git submodule update --init .private
-./scripts/init
+just init
 ```
 
 ### Understanding --no-folding
@@ -126,14 +131,14 @@ The `--no-folding` flag tells Stow to symlink individual files within directorie
 
 ## Troubleshooting
 
-Run `./scripts/check --verbose` to see detailed status of all components.
+Run `just check --verbose` to see detailed status of all components.
 
 If checks fail:
 ```bash
-./scripts/init
+just init
 ```
 
-The `init` script is idempotent — safe to run multiple times. It will repair any issues automatically.
+The `init` command is idempotent — safe to run multiple times. It will repair any issues automatically.
 
 ## Uninstall
 
