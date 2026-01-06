@@ -161,9 +161,11 @@ if [[ "$VERBOSE" == "true" ]]; then
     log_section "Yandex Cloud CLI"
 fi
 
-yc_result="0/1"
+yc_passed=0
+yc_total=2
+
 if check_yc; then
-    yc_result="1/1"
+    ((yc_passed++))
     if [[ "$VERBOSE" == "true" ]]; then
         version=$(yc version 2>/dev/null | head -1 | awk '{print $4}')
         log_success "yc ($version)"
@@ -173,6 +175,19 @@ else
         log_error "yc not installed"
     fi
 fi
+
+if command -v docker-credential-yc &>/dev/null; then
+    ((yc_passed++))
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_success "docker-credential-yc"
+    fi
+else
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_error "docker-credential-yc not installed"
+    fi
+fi
+
+yc_result="$yc_passed/$yc_total"
 
 if [[ "$VERBOSE" != "true" ]]; then
     print_section_result "Yandex Cloud CLI" "$yc_result"
