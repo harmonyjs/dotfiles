@@ -64,8 +64,10 @@ brew "qsv"               # High-performance CSV data toolkit
 brew "yq"                # Command-line YAML/XML/TOML processor (like jq for YAML)
 brew "miller"            # Swiss-army knife for CSV, JSON, and tabular data (mlr)
 
-# Containers
+# Infrastructure
 cask "docker"            # Docker Desktop: containerization platform with GUI
+tap "hashicorp/tap"
+brew "hashicorp/tap/terraform"  # Infrastructure as Code tool for cloud provisioning
 
 # Media
 brew "ffmpeg"            # Complete solution for video/audio recording and conversion
