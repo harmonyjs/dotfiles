@@ -352,9 +352,12 @@ install_yc() {
         log_verbose "$line"
     done
 
-    # Create symlink to XDG-compliant location
+    # Create symlinks to XDG-compliant location
     if [[ -f "$yc_dir/bin/yc" ]]; then
         ln -sf "$yc_dir/bin/yc" "$bin_dir/yc"
+    fi
+    if [[ -f "$yc_dir/bin/docker-credential-yc" ]]; then
+        ln -sf "$yc_dir/bin/docker-credential-yc" "$bin_dir/docker-credential-yc"
     fi
 
     # Add to PATH for current session if not already there
