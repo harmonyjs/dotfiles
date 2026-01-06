@@ -69,6 +69,11 @@ if ! ensure_all_dependencies; then
     ((failed++))
 fi
 
+# Rustup (installed via official script, not Homebrew)
+if ! ensure_rustup; then
+    ((failed++))
+fi
+
 # -----------------------------------------------------------------------------
 # Submodules
 # -----------------------------------------------------------------------------

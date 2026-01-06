@@ -274,6 +274,61 @@ ensure_nerd_font() {
 }
 
 # =============================================================================
+# Rustup Installation (official method via curl)
+# =============================================================================
+
+# Check if rustup/cargo is installed
+check_rustup() {
+    command -v rustup &>/dev/null && command -v cargo &>/dev/null
+}
+
+# Install rustup via official script
+install_rustup() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1 | while read -r line; do
+        log_verbose "$line"
+    done
+
+    # Source cargo env for current session
+    if [[ -f "$HOME/.cargo/env" ]]; then
+        source "$HOME/.cargo/env"
+    fi
+
+    check_rustup
+}
+
+# Ensure rustup is installed
+ensure_rustup() {
+    if check_rustup; then
+        local version
+        version=$(rustup --version 2>/dev/null | head -1 | awk '{print $2}')
+        log_success "rustup ($version)"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "rustup — would install via official script"
+        return 0
+    fi
+
+    log_warning "rustup not installed"
+    log_action "Installing via official script..."
+
+    if install_rustup; then
+        local version
+        version=$(rustup --version 2>/dev/null | head -1 | awk '{print $2}')
+        log_success "rustup ($version)"
+        return 0
+    else
+        log_error "rustup — installation failed"
+        return 1
+    fi
+}
+
+# =============================================================================
 # Summary Functions
 # =============================================================================
 

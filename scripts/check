@@ -124,6 +124,37 @@ read -r passed total <<< "$(parse_result "$brewfile_result")"
 [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true || true
 
 # -----------------------------------------------------------------------------
+# Rustup
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Rustup"
+fi
+
+rustup_result="0/1"
+if check_rustup; then
+    rustup_result="1/1"
+    if [[ "$VERBOSE" == "true" ]]; then
+        version=$(rustup --version 2>/dev/null | head -1 | awk '{print $2}')
+        log_success "rustup ($version)"
+    fi
+else
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_error "rustup not installed"
+    fi
+fi
+
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Rustup" "$rustup_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$rustup_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
 # Submodules
 # -----------------------------------------------------------------------------
 if [[ "$VERBOSE" == "true" ]]; then
