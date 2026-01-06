@@ -52,6 +52,7 @@ brew "gh"                # GitHub CLI for issues, PRs, and repository management
 brew "gnupg"                     # GnuPG for encryption (required for Doppler signature verification)
 tap "dopplerhq/cli"
 brew "doppler"                   # Doppler CLI for secrets management
+cask "1password-cli"             # 1Password command-line tool for secrets and credentials
 
 # Languages and runtimes
 brew "go"                # Go programming language compiler and tools
