@@ -66,11 +66,10 @@ brew "yq"                # Command-line YAML/XML/TOML processor (like jq for YAM
 brew "miller"            # Swiss-army knife for CSV, JSON, and tabular data (mlr)
 
 # Infrastructure
-cask "docker"            # Docker Desktop: containerization platform with GUI
+cask "docker-desktop"    # Docker Desktop: containerization platform with GUI
 tap "hashicorp/tap"
 brew "hashicorp/tap/terraform"  # Infrastructure as Code tool for cloud provisioning
-tap "yandex-cloud/tap"
-brew "yandex-cloud/tap/yc"      # Yandex Cloud CLI for managing cloud resources
+# Yandex Cloud CLI: install manually via curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
 
 # Media
 brew "ffmpeg"            # Complete solution for video/audio recording and conversion

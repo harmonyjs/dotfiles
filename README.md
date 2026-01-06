@@ -14,6 +14,12 @@ This is my minimal yet powerful terminal setup for macOS with tmux + Alacritty. 
 - Starship prompt
 - One-command installation
 
+## Principles
+
+**Zero-friction setup** — Clone, run `just init`, and everything works. No manual steps, no "install this separately" instructions. If it's in the setup, it's automated.
+
+**Reproducibility** — `just check` passes 100% on any fresh macOS machine. The setup is deterministic and verified by automated checks.
+
 ## Quick Start
 
 ```bash

@@ -7,7 +7,7 @@ You are maintaining a dotfiles repository that uses GNU Stow for symlink managem
 - Required stow flags: `-t ~` (target home directory), `--no-folding` (preserve runtime directories), `-v` (verbose)
 - `.stow-local-ignore` controls which files should NOT be symlinked
 - Machine-specific settings use `*.local` pattern (`.zshrc.local`, `*.local.json`) - never symlinked
-- Always verify changes with `./scripts/verify-setup.sh`
+- Always verify changes with `just check` (or `./scripts/check`)
 - Maintain macOS compatibility with Homebrew-installed dependencies
 
 ## Scenario 1: Adding New Dotfile
@@ -43,7 +43,7 @@ When troubleshooting problems with the dotfiles setup, you should:
 
 1. **Diagnostic Assessment**: Run the verification script first and identify which specific checks are failing
 2. **Symlink Integrity**: Verify all symlinks are pointing correctly to files in the dotfiles directory
-3. **Path Type Validation**: Check if symlinks use relative paths (correct) vs absolute paths (incorrect) - verify-setup.sh warns about this
+3. **Path Type Validation**: Check if symlinks use relative paths (correct) vs absolute paths (incorrect) - check script warns about this
 4. **Broken Link Detection**: Identify any broken symlinks in the home directory that need attention
 5. **Stow Status Check**: Examine stow's simulation output for conflicts, warnings, or other issues
 6. **Symlink Recovery**: If symlinks are corrupted or missing, use `stow -D -v -t ~ --no-folding . && stow -v -t ~ --no-folding .` to recreate
@@ -54,7 +54,7 @@ When troubleshooting problems with the dotfiles setup, you should:
 ## Critical Requirements
 - **Theme Consistency**: Never modify color schemes away from Catppuccin Latte
 - **macOS Compatibility**: All changes must work on macOS with Homebrew dependencies
-- **Verification Mandatory**: Every change must pass `./scripts/verify-setup.sh`
+- **Verification Mandatory**: Every change must pass `just check`
 - **Backup Safety**: Always create backups before modifying existing configurations
 - **Stow Flags**: Always use `-v -t ~ --no-folding` flags with stow commands
 - **Symlink Paths**: Ensure symlinks use relative paths, never absolute paths

@@ -155,6 +155,37 @@ read -r passed total <<< "$(parse_result "$rustup_result")"
 [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
 
 # -----------------------------------------------------------------------------
+# Yandex Cloud CLI
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Yandex Cloud CLI"
+fi
+
+yc_result="0/1"
+if check_yc; then
+    yc_result="1/1"
+    if [[ "$VERBOSE" == "true" ]]; then
+        version=$(yc version 2>/dev/null | head -1 | awk '{print $4}')
+        log_success "yc ($version)"
+    fi
+else
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_error "yc not installed"
+    fi
+fi
+
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Yandex Cloud CLI" "$yc_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$yc_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
 # Shell Integration
 # -----------------------------------------------------------------------------
 if [[ "$VERBOSE" == "true" ]]; then

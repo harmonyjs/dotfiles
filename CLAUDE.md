@@ -14,7 +14,7 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 - **GNU Stow** manages symlinks from repo to `~` directory
 - **`.stow-local-ignore`** defines files excluded from symlinking
 - **`--no-folding`** flag required for `.claude` directory
-- **`./scripts/verify-setup.sh`** validates entire setup
+- **`./scripts/check`** (or `just check`) validates entire setup
 - **`.claude/`** is a git submodule with Claude Code configs
 
 ## Repository Structure
@@ -24,15 +24,25 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 - `.zshrc` - shell config (sources `.zsh_aliases` and `.zshrc.local`)
 - `.zsh_aliases` - command aliases
 
+## Development Principles
+
+**No broken states** — Never commit changes that leave the setup non-functional. If something doesn't work via Homebrew, find an alternative and automate it. A comment saying "install manually" is not a solution.
+
+**User-first thinking** — Every decision is made from the perspective of someone cloning this repo on a fresh machine. They shouldn't read code comments or debug why something didn't install.
+
+**Automation over documentation** — If an action can be automated, it must be automated. Documentation describes "how it works", not "what to do manually".
+
+**Attention to details** — Details matter: correct installation paths, clean directory structure, no warnings. Quality is built from details.
+
 ## AI Agent Guidelines
 
 **Before changes:**
 1. Read [AGENTS.md](AGENTS.md) for detailed scenarios
-2. Run `./scripts/verify-setup.sh` to check current state
+2. Run `just check` to check current state
 3. Create backups before modifying configs
 
 **After changes:**
-1. Run `./scripts/verify-setup.sh` - all checks must pass
+1. Run `just check` - all checks must pass
 2. Update docs if keybindings or behavior changed
 3. Preserve Catppuccin Latte theme (critical requirement)
 

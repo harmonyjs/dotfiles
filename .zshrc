@@ -19,6 +19,13 @@ setopt HIST_IGNORE_ALL_DUPS      # Delete old recorded entry if new entry is a d
 setopt HIST_SAVE_NO_DUPS         # Don't write duplicate entries in the history file.
 
 #
+# PATH
+# #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+
+# XDG-compliant user binaries
+[[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
+
+#
 # Starship Prompt
 # #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 

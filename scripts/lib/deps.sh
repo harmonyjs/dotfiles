@@ -329,6 +329,71 @@ ensure_rustup() {
 }
 
 # =============================================================================
+# Yandex Cloud CLI (official method via curl)
+# =============================================================================
+
+# Check if yc is installed
+check_yc() {
+    command -v yc &>/dev/null
+}
+
+# Install yc via official script
+install_yc() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    local yc_dir="$HOME/.local/yandex-cloud"
+    local bin_dir="$HOME/.local/bin"
+
+    # Install to isolated directory
+    mkdir -p "$bin_dir"
+    curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i "$yc_dir" -n 2>&1 | while read -r line; do
+        log_verbose "$line"
+    done
+
+    # Create symlink to XDG-compliant location
+    if [[ -f "$yc_dir/bin/yc" ]]; then
+        ln -sf "$yc_dir/bin/yc" "$bin_dir/yc"
+    fi
+
+    # Add to PATH for current session if not already there
+    if [[ ":$PATH:" != *":$bin_dir:"* ]]; then
+        export PATH="$bin_dir:$PATH"
+    fi
+
+    check_yc
+}
+
+# Ensure yc is installed
+ensure_yc() {
+    if check_yc; then
+        local version
+        version=$(yc version 2>/dev/null | head -1 | awk '{print $4}')
+        log_success "yc ($version)"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "yc — would install via official script"
+        return 0
+    fi
+
+    log_warning "yc (Yandex Cloud CLI) not installed"
+    log_action "Installing via official script..."
+
+    if install_yc; then
+        local version
+        version=$(yc version 2>/dev/null | head -1 | awk '{print $4}')
+        log_success "yc ($version)"
+        return 0
+    else
+        log_error "yc — installation failed"
+        return 1
+    fi
+}
+
+# =============================================================================
 # FZF Shell Integration
 # =============================================================================
 

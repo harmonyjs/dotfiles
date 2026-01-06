@@ -74,6 +74,11 @@ if ! ensure_rustup; then
     ((failed++))
 fi
 
+# Yandex Cloud CLI (installed via official script, not Homebrew)
+if ! ensure_yc; then
+    ((failed++))
+fi
+
 # -----------------------------------------------------------------------------
 # Submodules
 # -----------------------------------------------------------------------------
