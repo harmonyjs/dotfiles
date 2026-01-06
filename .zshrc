@@ -25,6 +25,12 @@ setopt HIST_SAVE_NO_DUPS         # Don't write duplicate entries in the history 
 eval "$(starship init zsh)"
 
 #
+# Completion
+# #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+
+autoload -Uz compinit && compinit
+
+#
 # Utilities
 # #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 

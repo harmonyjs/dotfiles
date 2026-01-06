@@ -329,6 +329,63 @@ ensure_rustup() {
 }
 
 # =============================================================================
+# FZF Shell Integration
+# =============================================================================
+
+# Check if fzf shell integration is set up
+check_fzf_shell() {
+    [[ -f "$HOME/.fzf.zsh" ]]
+}
+
+# Install fzf shell integration (key bindings + completion)
+install_fzf_shell() {
+    local fzf_install="/opt/homebrew/opt/fzf/install"
+
+    if [[ ! -x "$fzf_install" ]]; then
+        return 1
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    "$fzf_install" --all --no-bash --no-fish --no-update-rc 2>&1 | while read -r line; do
+        log_verbose "$line"
+    done
+
+    check_fzf_shell
+}
+
+# Ensure fzf shell integration is set up
+ensure_fzf_shell() {
+    if ! check_dependency fzf; then
+        log_verbose "fzf not installed, skipping shell integration"
+        return 0
+    fi
+
+    if check_fzf_shell; then
+        log_success "fzf shell integration"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "fzf shell integration — would configure"
+        return 0
+    fi
+
+    log_warning "fzf shell integration not configured"
+    log_action "Running fzf install..."
+
+    if install_fzf_shell; then
+        log_success "fzf shell integration configured"
+        return 0
+    else
+        log_warning "fzf shell integration failed (optional)"
+        return 0  # Non-fatal
+    fi
+}
+
+# =============================================================================
 # Summary Functions
 # =============================================================================
 

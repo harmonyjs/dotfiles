@@ -155,6 +155,44 @@ read -r passed total <<< "$(parse_result "$rustup_result")"
 [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
 
 # -----------------------------------------------------------------------------
+# Shell Integration
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Shell Integration"
+fi
+
+shell_passed=0
+shell_total=0
+
+# fzf
+if check_dependency fzf; then
+    ((shell_total++))
+    if check_fzf_shell; then
+        ((shell_passed++))
+        if [[ "$VERBOSE" == "true" ]]; then
+            log_success "fzf shell integration"
+        fi
+    else
+        if [[ "$VERBOSE" == "true" ]]; then
+            log_error "fzf shell integration — ~/.fzf.zsh missing"
+        fi
+    fi
+fi
+
+shell_result="${shell_passed}/${shell_total}"
+if [[ "$shell_total" -gt 0 ]]; then
+    if [[ "$VERBOSE" != "true" ]]; then
+        print_section_result "Shell integration" "$shell_result"
+    else
+        echo
+    fi
+
+    ((total_passed += shell_passed)) || true
+    ((total_checks += shell_total)) || true
+    [[ "$shell_passed" -ne "$shell_total" ]] && ((sections_failed++)) || true
+fi
+
+# -----------------------------------------------------------------------------
 # Submodules
 # -----------------------------------------------------------------------------
 if [[ "$VERBOSE" == "true" ]]; then
