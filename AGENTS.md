@@ -29,7 +29,7 @@ If a user asks you to add a new dotfile, you must ensure:
 When a user requests changes to any configuration file, you must:
 
 1. **Backup Creation**: Always create a timestamped backup of the current configuration before making changes
-2. **Configuration Type**: Identify whether you're modifying tmux (.tmux.conf), alacritty (.alacritty.toml), or shell (.zshrc, .zsh_aliases) configuration
+2. **Configuration Type**: Identify whether you're modifying tmux (.config/tmux/tmux.conf), alacritty (.config/alacritty/alacritty.toml), or shell (.zshrc, .zsh_aliases) configuration
 3. **Machine-Specific Preservation**: Never modify `.zshrc.local` or `*.local.json` files - these are machine-specific and not version controlled
 4. **Theme Preservation**: Maintain the Catppuccin Latte theme consistency while making requested changes
 5. **Syntax Validation**: Test that the modified configuration has valid syntax for the specific tool

@@ -77,13 +77,13 @@ just init --dry-run     # Same as just preview
 
 ## What's Included
 
-- `.tmux.conf` - Tmux configuration with custom keybindings
-- `.alacritty.toml` - Terminal emulator settings
+- `.config/tmux/tmux.conf` - Tmux configuration with custom keybindings
+- `.config/alacritty/alacritty.toml` - Terminal emulator settings
+- `.config/starship.toml` - Starship prompt configuration
 - `.zshrc` - ZSH configuration (sources `.zsh_aliases` and `.zshrc.local`)
 - `.zsh_aliases` - Useful shell aliases
-- `.config/starship.toml` - Starship prompt configuration
 - `.claude/` - Git submodule with Claude Code configurations
-- `.private/` - Optional git submodule for private configurations
+- `.private/` - Optional git submodule for private configurations (includes `.config/git/config`)
 
 ### ZSH Configuration Files
 

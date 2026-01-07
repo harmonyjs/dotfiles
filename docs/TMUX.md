@@ -87,7 +87,7 @@ test -d ~/.tmux/plugins/catppuccin-tmux && echo "✓ Plugins OK"
 
 **Config not loading:**
 ```bash
-tmux source-file ~/.tmux.conf
+tmux source-file ~/.config/tmux/tmux.conf
 ```
 
 **Plugins not working:**
@@ -115,12 +115,12 @@ Current flavor: `latte` (light theme)
 
 To change theme:
 ```bash
-# In .tmux.conf, modify:
+# In .config/tmux/tmux.conf, modify:
 set -g @catppuccin_flavour 'latte'    # Light
 # set -g @catppuccin_flavour 'mocha'  # Dark
 ```
 
 After changing, reload config and reinstall plugins:
 ```bash
-tmux source-file ~/.tmux.conf
+tmux source-file ~/.config/tmux/tmux.conf
 ~/.tmux/plugins/tpm/bin/update_plugins

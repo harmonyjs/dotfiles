@@ -38,7 +38,7 @@ Configuration expects tmux at `/opt/homebrew/bin/tmux`:
 which tmux
 # Should output: /opt/homebrew/bin/tmux
 
-# If different path, update .alacritty.toml:
+# If different path, update .config/alacritty/alacritty.toml:
 program = "/path/to/your/tmux"
 ```
 

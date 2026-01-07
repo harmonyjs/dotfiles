@@ -138,7 +138,7 @@ run_action() {
 
 # Check if we're in the dotfiles directory
 check_dotfiles_dir() {
-    if [[ ! -f "$DOTFILES_DIR/.tmux.conf" ]] || [[ ! -f "$DOTFILES_DIR/.zshrc" ]]; then
+    if [[ ! -f "$DOTFILES_DIR/.config/tmux/tmux.conf" ]] || [[ ! -f "$DOTFILES_DIR/.zshrc" ]]; then
         log_error "Not in dotfiles directory"
         echo "Please run this script from the dotfiles directory"
         exit 1

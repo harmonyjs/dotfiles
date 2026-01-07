@@ -19,8 +19,9 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 
 ## Repository Structure
 
-- `.tmux.conf` - tmux config (prefix: `Ctrl+Space`)
-- `.alacritty.toml` - terminal with auto-start tmux session "main"
+- `.config/tmux/tmux.conf` - tmux config (prefix: `Ctrl+Space`)
+- `.config/alacritty/alacritty.toml` - terminal with auto-start tmux session "main"
+- `.config/git/config` - git user config (in `.private` submodule)
 - `.zshenv` - environment variables and PATH (loaded always)
 - `.zprofile` - login shell config (intentionally empty)
 - `.zshrc` - interactive shell config (sources `.zsh_aliases` and `.zshrc.local`)

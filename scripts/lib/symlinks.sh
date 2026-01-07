@@ -14,16 +14,16 @@ fi
 
 # Main symlinks created by stow (for verification)
 MAIN_SYMLINKS=(
-    .tmux.conf
-    .alacritty.toml
     .zsh_aliases
     .zshrc
     .zshenv
     .zprofile
 )
 
-# Config directory symlinks (need special handling)
+# Config directory symlinks (XDG Base Directory compliant)
 CONFIG_SYMLINKS=(
+    .config/alacritty/alacritty.toml
+    .config/tmux/tmux.conf
     .config/starship.toml
 )
 
