@@ -32,6 +32,9 @@
 
 alias reload='source ~/.zshrc'
 
+# List files with eza (modern ls alternative)
+alias ll='eza -l --no-permissions --no-user --git --icons --group-directories-first --time-style=relative --header -A'
+
 # Open Visual Studio Code Insiders in a new window
 alias ci='code-insiders -n .'
 
