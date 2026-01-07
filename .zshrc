@@ -28,7 +28,8 @@ eval "$(starship init zsh)"
 # Completion
 # #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
-autoload -Uz compinit && compinit
+mkdir -p ~/.cache/zsh
+autoload -Uz compinit && compinit -d ~/.cache/zsh/zcompdump
 
 #
 # Utilities
