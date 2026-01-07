@@ -9,6 +9,11 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 export PNPM_HOME="$HOME/Library/pnpm"
 [[ ":$PATH:" != *":$PNPM_HOME:"* ]] && export PATH="$PNPM_HOME:$PATH"
 
+# Go (XDG-compliant paths)
+export GOPATH="$HOME/.local/share/go"
+export GOMODCACHE="$HOME/.cache/go/mod"
+[[ ":$PATH:" != *":$GOPATH/bin:"* ]] && export PATH="$GOPATH/bin:$PATH"
+
 # Proxy Configuration
 # ═══════════════════════════════════════════════════════════════════
 
