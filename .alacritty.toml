@@ -10,8 +10,7 @@ resize_increments = true                       # Resize window in character cell
 
 [terminal.shell]
 program = "/opt/homebrew/bin/tmux"                # Path to terminal multiplexer
-args = ["-v", "new-session", "-A", "-s", "main"] # Tmux arguments:
-                                                  #  -v = Verbose logging (for debugging)
+args = ["new-session", "-A", "-s", "main"]         # Tmux arguments:
                                                   #  new-session = Create new tmux session
                                                   #  -A = Attach if exists, create if doesn't
                                                   #  -s main = Session named "main"
