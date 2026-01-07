@@ -12,6 +12,9 @@ scripts
 README\.md
 LICENSE
 AGENTS\.md
+CLAUDE\.md
+Brewfile
+Justfile
 
 # Local configuration files
 .*\.local\.json
