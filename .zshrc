@@ -72,8 +72,8 @@ fi
 # Bind keys
 # #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
-bindkey "^[^[[D" backward-word
-bindkey "^[^[[C" forward-word
+bindkey "^[b" backward-word   # Option + Left (or Option + b)
+bindkey "^[f" forward-word    # Option + Right (or Option + f)
 
 #
 # Aliases
