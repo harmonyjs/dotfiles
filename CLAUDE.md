@@ -63,9 +63,10 @@ ZSH files have strict separation of concerns. Follow these rules when modifying 
 ## AI Agent Guidelines
 
 **Before changes:**
-1. Read [AGENTS.md](AGENTS.md) for detailed scenarios
-2. Run `just check` to check current state
-3. Create backups before modifying configs
+1. Verify all three repos (dotfiles, `.claude/`, `.private/`) are on `main`, up to date with remote, and working tree clean — report status before proceeding
+2. Read [AGENTS.md](AGENTS.md) for detailed scenarios
+3. Run `just check` to check current state
+4. Create backups before modifying configs
 
 **After changes:**
 1. Run `just check` - all checks must pass
