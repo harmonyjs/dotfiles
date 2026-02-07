@@ -18,7 +18,7 @@ export GOMODCACHE="$HOME/.cache/go/mod"
 # ═══════════════════════════════════════════════════════════════════
 
 _proxy="http://62.84.127.89:50050"
-_no_proxy="localhost,127.0.0.1,.local"
+_no_proxy="localhost,127.0.0.1,.local,.ru,yandex.net,yastatic.net"
 export http_proxy="$_proxy" HTTP_PROXY="$_proxy"
 export https_proxy="$_proxy" HTTPS_PROXY="$_proxy"
 export all_proxy="$_proxy" ALL_PROXY="$_proxy"
