@@ -72,6 +72,11 @@ ZSH files have strict separation of concerns. Follow these rules when modifying 
 2. Update docs if keybindings or behavior changed
 3. Preserve Catppuccin Latte theme (critical requirement)
 
+**Submodule hygiene (`.claude/`, `.private/`):**
+- Before committing or pushing, ensure each submodule is on `main` and up to date with its remote (`git -C <submodule> fetch && git -C <submodule> status`)
+- If a submodule is in detached HEAD — checkout `main` and pull before proceeding
+- After updating submodule content, commit the new ref in the parent repo and push both
+
 **Critical rules:**
 - Maintain macOS + Homebrew compatibility
 - Always use stow for symlink management
