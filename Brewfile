@@ -56,7 +56,7 @@ cask "1password-cli"             # 1Password command-line tool for secrets and c
 
 # Languages and runtimes
 brew "go"                # Go programming language compiler and tools
-brew "pipx"              # Install and run Python CLI applications in isolated environments
+brew "uv"                # Fast Python package manager with pip, venv, and pipx-like tool management
 brew "fnm"               # Fast Node.js version manager written in Rust
 
 # Data manipulation
