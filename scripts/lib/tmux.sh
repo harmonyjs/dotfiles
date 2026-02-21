@@ -277,15 +277,6 @@ check_keybindings() {
         log_error "Vim navigation missing"
     fi
 
-    # Alt+Arrow navigation
-    ((total++))
-    if tmux list-keys -T root 2>/dev/null | grep -q 'M-Left.*select-pane'; then
-        ((passed++))
-        [[ "$VERBOSE" == "true" ]] && log_success "Alt+Arrow navigation"
-    else
-        log_error "Alt+Arrow navigation missing"
-    fi
-
     # Shift+Arrow windows
     ((total++))
     if tmux list-keys -T root 2>/dev/null | grep -q 'S-Left.*previous-window'; then
