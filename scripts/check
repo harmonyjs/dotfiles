@@ -239,6 +239,52 @@ if [[ "$shell_total" -gt 0 ]]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Corepack Shims
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Corepack Shims"
+fi
+
+corepack_passed=0
+corepack_total=0
+
+# Only check if Node.js is available (activate fnm for bash context)
+activate_fnm
+if command -v node &>/dev/null; then
+    for shim in yarn pnpm; do
+        ((corepack_total++))
+        if is_corepack_shim "$shim"; then
+            ((corepack_passed++))
+            if [[ "$VERBOSE" == "true" ]]; then
+                version=$("$shim" --version 2>/dev/null)
+                log_success "$shim ($version)"
+            fi
+        else
+            if [[ "$VERBOSE" == "true" ]]; then
+                if command -v "$shim" &>/dev/null; then
+                    log_error "$shim — not a corepack shim"
+                else
+                    log_error "$shim — not installed"
+                fi
+            fi
+        fi
+    done
+fi
+
+corepack_result="${corepack_passed}/${corepack_total}"
+if [[ "$corepack_total" -gt 0 ]]; then
+    if [[ "$VERBOSE" != "true" ]]; then
+        print_section_result "Corepack shims" "$corepack_result"
+    else
+        echo
+    fi
+
+    ((total_passed += corepack_passed)) || true
+    ((total_checks += corepack_total)) || true
+    [[ "$corepack_passed" -ne "$corepack_total" ]] && ((sections_failed++)) || true
+fi
+
+# -----------------------------------------------------------------------------
 # Submodules
 # -----------------------------------------------------------------------------
 if [[ "$VERBOSE" == "true" ]]; then

@@ -95,6 +95,10 @@ log_section "Shell Integration"
 # fzf
 ensure_fzf_shell
 
+# corepack shims (yarn, pnpm)
+activate_fnm
+ensure_corepack_shims
+
 # -----------------------------------------------------------------------------
 # Setup
 # -----------------------------------------------------------------------------

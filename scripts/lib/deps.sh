@@ -454,6 +454,75 @@ ensure_fzf_shell() {
 }
 
 # =============================================================================
+# Corepack Shims (yarn, pnpm via Node.js corepack)
+# =============================================================================
+
+# Activate fnm for bash scripts (where .zshrc is not loaded)
+activate_fnm() {
+    if command -v fnm &>/dev/null; then
+        eval "$(fnm env)"
+    fi
+}
+
+# Check if a command is a corepack shim (not a Homebrew binary)
+is_corepack_shim() {
+    local cmd="$1"
+    local cmd_path
+    cmd_path=$(command -v "$cmd" 2>/dev/null) || return 1
+    local target
+    target=$(readlink "$cmd_path" 2>/dev/null) || return 1
+    [[ "$target" == *corepack* ]]
+}
+
+# Check if all corepack shims are set up
+check_corepack_shims() {
+    is_corepack_shim yarn && is_corepack_shim pnpm
+}
+
+# Install corepack shims
+install_corepack_shims() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    corepack enable yarn pnpm 2>&1 | while read -r line; do
+        log_verbose "$line"
+    done
+
+    check_corepack_shims
+}
+
+# Ensure corepack shims are set up
+ensure_corepack_shims() {
+    # Skip if Node.js is not available
+    if ! command -v node &>/dev/null; then
+        log_verbose "Node.js not available, skipping corepack shims"
+        return 0
+    fi
+
+    if check_corepack_shims; then
+        log_success "corepack shims (yarn, pnpm)"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "corepack shims — would enable yarn and pnpm"
+        return 0
+    fi
+
+    log_warning "corepack shims not configured"
+    log_action "Running corepack enable..."
+
+    if install_corepack_shims; then
+        log_success "corepack shims (yarn, pnpm)"
+        return 0
+    else
+        log_error "corepack enable failed"
+        return 1
+    fi
+}
+
+# =============================================================================
 # Summary Functions
 # =============================================================================
 

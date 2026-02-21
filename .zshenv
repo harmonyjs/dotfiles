@@ -5,10 +5,6 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 [[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
 . "$HOME/.cargo/env"
 
-# pnpm
-export PNPM_HOME="$HOME/Library/pnpm"
-[[ ":$PATH:" != *":$PNPM_HOME:"* ]] && export PATH="$PNPM_HOME:$PATH"
-
 # Go (XDG-compliant paths)
 export GOPATH="$HOME/.local/share/go"
 export GOMODCACHE="$HOME/.cache/go/mod"
