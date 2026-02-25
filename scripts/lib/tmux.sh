@@ -12,6 +12,7 @@ fi
 # TPM (Tmux Plugin Manager) Functions
 # =============================================================================
 
+TMUX_CONF="$HOME/.config/tmux/tmux.conf"
 TPM_DIR="$HOME/.config/tmux/plugins/tpm"
 TPM_REPO="https://github.com/tmux-plugins/tpm"
 
@@ -126,14 +127,13 @@ ensure_plugins() {
 # Config Functions
 # =============================================================================
 
-# Load tmux configuration
+# Load tmux configuration (reload into running server, or no-op)
 load_config() {
     if [[ "$DRY_RUN" == "true" ]]; then
         return 0
     fi
 
-    tmux start-server 2>/dev/null
-    tmux source-file ~/.tmux.conf 2>/dev/null
+    tmux source-file "$TMUX_CONF" 2>/dev/null
 }
 
 # Ensure config is loaded
@@ -155,6 +155,13 @@ ensure_config_loaded() {
 # Check Functions (for check script)
 # =============================================================================
 
+# Query a tmux option by loading config into a temporary server
+# Usage: tmux_option show_flag option_name
+# Examples: tmux_option -g prefix, tmux_option -gw mode-keys
+tmux_option() {
+    tmux -f "$TMUX_CONF" start-server \; show "$@" 2>/dev/null
+}
+
 # Check tmux configuration
 check_tmux_config() {
     local total=0
@@ -162,16 +169,19 @@ check_tmux_config() {
 
     # Config loads without errors
     ((total++))
-    if tmux start-server && tmux source-file ~/.tmux.conf 2>/dev/null || tmux show -g prefix &>/dev/null; then
+    if tmux_option -g prefix &>/dev/null; then
         ((passed++))
         [[ "$VERBOSE" == "true" ]] && log_success "Config loads without errors"
     else
         log_error "Config fails to load"
+        # All subsequent checks will fail too — bail early
+        echo "$passed/$total"
+        return
     fi
 
     # Prefix key
     ((total++))
-    if tmux show -g prefix 2>/dev/null | grep -q 'C-Space'; then
+    if tmux_option -g prefix | grep -q 'C-Space'; then
         ((passed++))
         [[ "$VERBOSE" == "true" ]] && log_success "Prefix is C-Space"
     else
@@ -180,16 +190,16 @@ check_tmux_config() {
 
     # Mouse support
     ((total++))
-    if tmux show -g mouse 2>/dev/null | grep -q 'on'; then
+    if tmux_option -g mouse | grep -q 'on'; then
         ((passed++))
         [[ "$VERBOSE" == "true" ]] && log_success "Mouse enabled"
     else
         log_error "Mouse disabled"
     fi
 
-    # True color
+    # True color (check terminal-overrides for Tc flag)
     ((total++))
-    if tmux info 2>/dev/null | grep -Eq 'RGB|Tc'; then
+    if tmux_option -g terminal-overrides | grep -q 'Tc'; then
         ((passed++))
         [[ "$VERBOSE" == "true" ]] && log_success "True color support"
     else
@@ -198,7 +208,7 @@ check_tmux_config() {
 
     # Vi mode
     ((total++))
-    if tmux show -gw mode-keys 2>/dev/null | grep -q 'vi'; then
+    if tmux_option -gw mode-keys | grep -q 'vi'; then
         ((passed++))
         [[ "$VERBOSE" == "true" ]] && log_success "Vi mode enabled"
     else
@@ -207,7 +217,7 @@ check_tmux_config() {
 
     # Base index
     ((total++))
-    if tmux show -g base-index 2>/dev/null | grep -q '1$'; then
+    if tmux_option -g base-index | grep -q '1$'; then
         ((passed++))
         [[ "$VERBOSE" == "true" ]] && log_success "Windows start at 1"
     else
@@ -216,7 +226,7 @@ check_tmux_config() {
 
     # Renumber windows
     ((total++))
-    if tmux show -g renumber-windows 2>/dev/null | grep -q 'on'; then
+    if tmux_option -g renumber-windows | grep -q 'on'; then
         ((passed++))
         [[ "$VERBOSE" == "true" ]] && log_success "Window renumbering enabled"
     else
