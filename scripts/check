@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/lib/deps.sh"
 source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
+source "$SCRIPT_DIR/lib/dock.sh"
 
 # Help message
 show_help() {
@@ -366,6 +367,25 @@ else
 fi
 
 read -r passed total <<< "$(parse_result "$keys_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Dock
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Dock"
+fi
+
+dock_result=$(check_dock)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Dock" "$dock_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$dock_result")"
 ((total_passed += passed)) || true
 ((total_checks += total)) || true
 [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true

@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/lib/deps.sh"
 source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
+source "$SCRIPT_DIR/lib/dock.sh"
 
 # Help message
 show_help() {
@@ -120,6 +121,12 @@ ensure_plugins
 
 # Load config
 ensure_config_loaded
+
+# -----------------------------------------------------------------------------
+# Dock
+# -----------------------------------------------------------------------------
+log_section "Dock"
+ensure_dock
 
 # -----------------------------------------------------------------------------
 # Summary

@@ -22,6 +22,7 @@
 
 # System utilities
 brew "stow"              # GNU Stow: symlink farm manager for dotfiles
+brew "dockutil"          # Command-line tool for managing macOS Dock items
 brew "just"              # Command runner, modern Make alternative
 cask "raycast"           # Spotlight replacement with extensions and productivity features
 cask "bluesnooze"        # Automatically disables Bluetooth when Mac goes to sleep
