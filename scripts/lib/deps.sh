@@ -277,6 +277,13 @@ ensure_nerd_font() {
 # Rustup Installation (official method via curl)
 # =============================================================================
 
+# Activate cargo for bash scripts (where .zshenv is not loaded)
+activate_cargo() {
+    if [[ -f "$HOME/.cargo/env" ]]; then
+        . "$HOME/.cargo/env"
+    fi
+}
+
 # Check if rustup/cargo is installed
 check_rustup() {
     command -v rustup &>/dev/null && command -v cargo &>/dev/null

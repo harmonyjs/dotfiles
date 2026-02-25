@@ -126,6 +126,8 @@ read -r passed total <<< "$(parse_result "$brewfile_result")"
 # -----------------------------------------------------------------------------
 # Rustup
 # -----------------------------------------------------------------------------
+activate_cargo
+
 if [[ "$VERBOSE" == "true" ]]; then
     log_section "Rustup"
 fi

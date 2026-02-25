@@ -70,6 +70,7 @@ if ! ensure_all_dependencies; then
 fi
 
 # Rustup (installed via official script, not Homebrew)
+activate_cargo
 if ! ensure_rustup; then
     ((failed++))
 fi
