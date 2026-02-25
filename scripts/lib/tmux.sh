@@ -12,7 +12,7 @@ fi
 # TPM (Tmux Plugin Manager) Functions
 # =============================================================================
 
-TPM_DIR="$HOME/.tmux/plugins/tpm"
+TPM_DIR="$HOME/.config/tmux/plugins/tpm"
 TPM_REPO="https://github.com/tmux-plugins/tpm"
 
 # Check if TPM is installed
@@ -70,7 +70,7 @@ TMUX_PLUGINS=(
 # Check if a plugin is installed
 is_plugin_installed() {
     local plugin="$1"
-    [[ -d "$HOME/.tmux/plugins/$plugin" ]]
+    [[ -d "$HOME/.config/tmux/plugins/$plugin" ]]
 }
 
 # Install all plugins via TPM

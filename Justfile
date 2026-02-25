@@ -47,4 +47,4 @@ tmux-reload:
 
 # Install tmux plugins
 tmux-plugins:
-    ~/.tmux/plugins/tpm/bin/install_plugins
+    ~/.config/tmux/plugins/tpm/bin/install_plugins

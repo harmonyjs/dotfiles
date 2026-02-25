@@ -41,7 +41,7 @@ This config uses `vim-tmux-navigator` plugin for seamless navigation:
 If navigation breaks between vim and tmux:
 ```bash
 # Ensure plugin is installed in both vim and tmux
-# Check tmux plugin: ~/.tmux/plugins/vim-tmux-navigator
+# Check tmux plugin: ~/.config/tmux/plugins/vim-tmux-navigator
 # Check vim plugin in your vim config
 ```
 
@@ -80,7 +80,7 @@ tmux show -g prefix | grep -q 'C-Space' && echo "✓ Prefix OK"
 tmux show -g mouse | grep -q on && echo "✓ Mouse OK"
 
 # Check plugins
-test -d ~/.tmux/plugins/catppuccin-tmux && echo "✓ Plugins OK"
+test -d ~/.config/tmux/plugins/catppuccin-tmux && echo "✓ Plugins OK"
 ```
 
 ### Common Issues
@@ -93,9 +93,9 @@ tmux source-file ~/.config/tmux/tmux.conf
 **Plugins not working:**
 ```bash
 # Reinstall TPM
-rm -rf ~/.tmux/plugins/
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-~/.tmux/plugins/tpm/bin/install_plugins
+rm -rf ~/.config/tmux/plugins/
+git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
+~/.config/tmux/plugins/tpm/bin/install_plugins
 ```
 
 **Colors wrong:**
@@ -123,4 +123,4 @@ set -g @catppuccin_flavour 'latte'    # Light
 After changing, reload config and reinstall plugins:
 ```bash
 tmux source-file ~/.config/tmux/tmux.conf
-~/.tmux/plugins/tpm/bin/update_plugins
+~/.config/tmux/plugins/tpm/bin/update_plugins
