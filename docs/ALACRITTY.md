@@ -6,13 +6,16 @@ This setup auto-starts tmux session "main" when Alacritty opens:
 
 ```toml
 [terminal.shell]
-program = "/opt/homebrew/bin/tmux"                
-args = ["-v", "new-session", "-A", "-s", "main"] 
+program = "/bin/zsh"
+args = ["-lc", "exec tmux new-session -A -s main"]
 ```
 
-- Creates or attaches to session named "main"
-- Enables verbose logging (`-v`) for debugging
+How it works:
+- Alacritty launches a **login shell** (`zsh -l`), which sources `.zshenv` to set up Homebrew PATH
+- `exec tmux` replaces the shell process with tmux (no orphan shell left behind)
+- Creates or attaches to session named "main" (`-A` flag)
 - Session persists when Alacritty closes
+- Works on both Apple Silicon (`/opt/homebrew`) and Intel (`/usr/local`) Macs
 
 ## Multiple Windows
 
@@ -30,24 +33,27 @@ All windows share the same tmux session "main".
 
 ## Troubleshooting
 
-### Tmux Path Issues
-Configuration expects tmux at `/opt/homebrew/bin/tmux`:
+### Tmux Not Found
+
+Alacritty relies on the login shell's PATH to find tmux. If tmux isn't launching:
 
 ```bash
-# Check tmux location
-which tmux
-# Should output: /opt/homebrew/bin/tmux
+# Verify tmux is discoverable via login shell
+zsh -lc "which tmux"
 
-# If different path, update .config/alacritty/alacritty.toml:
-program = "/path/to/your/tmux"
+# Should output one of:
+#   /opt/homebrew/bin/tmux  (Apple Silicon)
+#   /usr/local/bin/tmux     (Intel)
 ```
 
+If this fails, check that `.zshenv` has the Homebrew `eval` block and that tmux is installed (`brew install tmux`).
+
 ### Font Problems
+
 Requires JetBrainsMono Nerd Font:
 
 ```bash
 # Install if missing
-brew tap homebrew/cask-fonts
 brew install --cask font-jetbrains-mono-nerd-font
 
 # Verify installation
@@ -55,24 +61,25 @@ fc-list | grep -i jetbrains
 ```
 
 ### Debug Tmux Startup
-Enable verbose logging (already configured):
+
+Run the same command Alacritty uses, manually:
 
 ```bash
-# Check tmux logs or run directly
-/opt/homebrew/bin/tmux -v new-session -A -s main
+zsh -lc "exec tmux new-session -A -s main"
 ```
 
 ## Project-Specific Sessions
 
-For different projects, modify the session name:
+For different projects, modify the session name in `alacritty.toml`:
 
 ```toml
 [terminal.shell]
-args = ["-v", "new-session", "-A", "-s", "project-name"]
+args = ["-lc", "exec tmux new-session -A -s project-name"]
 ```
 
-Or create aliases in `.zshrc`:
+Or create aliases in `.zsh_aliases`:
 
 ```bash
-alias work='alacritty -e tmux new-session -A -s work'
-alias personal='alacritty -e tmux new-session -A -s personal'
+alias work='alacritty -e zsh -lc "exec tmux new-session -A -s work"'
+alias personal='alacritty -e zsh -lc "exec tmux new-session -A -s personal"'
+```

@@ -407,7 +407,7 @@ check_fzf_shell() {
 
 # Install fzf shell integration (key bindings + completion)
 install_fzf_shell() {
-    local fzf_install="/opt/homebrew/opt/fzf/install"
+    local fzf_install="$(brew --prefix)/opt/fzf/install"
 
     if [[ ! -x "$fzf_install" ]]; then
         return 1

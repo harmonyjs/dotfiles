@@ -9,11 +9,10 @@ dimensions = { columns = 133, lines = 40 }     # Set window size to avoid blank 
 resize_increments = true                       # Resize window in character cell increments
 
 [terminal.shell]
-program = "/opt/homebrew/bin/tmux"                # Path to terminal multiplexer
-args = ["new-session", "-A", "-s", "main"]         # Tmux arguments:
-                                                  #  new-session = Create new tmux session
-                                                  #  -A = Attach if exists, create if doesn't
-                                                  #  -s main = Session named "main"
+program = "/bin/zsh"                                  # Login shell resolves tmux via PATH
+args = ["-lc", "exec tmux new-session -A -s main"]   # -l = login (sources .zshenv for Homebrew PATH)
+                                                      # exec = replaces shell with tmux process
+                                                      # Works on both Apple Silicon and Intel Macs
 
 [font]
 size = 14.0
