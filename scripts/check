@@ -162,7 +162,7 @@ if [[ "$VERBOSE" == "true" ]]; then
 fi
 
 yc_passed=0
-yc_total=2
+yc_total=1
 
 if check_yc; then
     ((yc_passed++))
@@ -173,17 +173,6 @@ if check_yc; then
 else
     if [[ "$VERBOSE" == "true" ]]; then
         log_error "yc not installed"
-    fi
-fi
-
-if command -v docker-credential-yc &>/dev/null; then
-    ((yc_passed++))
-    if [[ "$VERBOSE" == "true" ]]; then
-        log_success "docker-credential-yc"
-    fi
-else
-    if [[ "$VERBOSE" == "true" ]]; then
-        log_error "docker-credential-yc not installed"
     fi
 fi
 
