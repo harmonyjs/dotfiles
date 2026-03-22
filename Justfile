@@ -27,11 +27,11 @@ dry-run *ARGS:
 
 # Apply symlinks via stow
 stow:
-    stow --restow --no-folding .
+    stow --restow --no-folding -t ~ .
 
 # Show symlink status
 stow-status:
-    stow --no --verbose . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
+    stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
 
 # Install Brewfile packages
 brew:
