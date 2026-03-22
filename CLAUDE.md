@@ -12,6 +12,7 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 ## Key Concepts
 
 - **GNU Stow** manages symlinks from repo to `~` directory
+- **GNU Stow requires `-t ~`** — without it, stow targets the parent directory of the repo, not `$HOME`. The canonical invocation is `stow --restow --no-folding -t ~ .`. The `scripts/lib/symlinks.sh:run_stow()` function is the source of truth for stow flags.
 - **`.stow-local-ignore`** defines files excluded from symlinking
 - **`--no-folding`** flag required for `.claude` directory
 - **`./scripts/check`** (or `just check`) validates entire setup
