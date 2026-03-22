@@ -43,7 +43,7 @@ Create `.claude/statusline.zsh` with the full implementation:
 IFS=$'\t' read -r model pct <<< "$(jq -r '[.model.display_name, (.context_window.used_percentage // 0 | floor)] | @tsv' 2>/dev/null)"
 
 # If parsing failed, produce no output
-[[ -z "$model" ]] && return 0
+[[ -z "$model" ]] && exit 0
 
 # --- Compute bar fill (0–10 blocks) ---
 (( filled = pct / 10 ))
@@ -68,15 +68,20 @@ printf '\033[38;5;8m%s\033[0m  %b%s\033[0m' "$model" "$color" "$bar"
 
 Run: `chmod +x .claude/statusline.zsh`
 
-- [ ] **Step 3: Verify with mock JSON — green bar (low usage)**
+- [ ] **Step 3: Create symlink via stow**
+
+Run: `just stow`
+Verify: `ls -la ~/.claude/statusline.zsh` — should be a symlink to `../GitHub/dotfiles/.claude/statusline.zsh`
+
+- [ ] **Step 4: Verify — green bar (25%)**
 
 Run:
 ```bash
 echo '{"model":{"display_name":"Opus 4.6"},"context_window":{"used_percentage":25}}' | ~/.claude/statusline.zsh
 ```
-Expected: `Opus 4.6` in gray, followed by 2 filled + 8 empty blocks in green.
+Expected: `Opus 4.6` in gray, 2 filled + 8 empty blocks in green.
 
-- [ ] **Step 4: Verify with mock JSON — yellow bar (mid usage)**
+- [ ] **Step 5: Verify — yellow bar (65%)**
 
 Run:
 ```bash
@@ -84,7 +89,7 @@ echo '{"model":{"display_name":"Opus 4.6"},"context_window":{"used_percentage":6
 ```
 Expected: 6 filled + 4 empty blocks in yellow.
 
-- [ ] **Step 5: Verify with mock JSON — red bar (high usage)**
+- [ ] **Step 6: Verify — red bar (92%)**
 
 Run:
 ```bash
@@ -92,7 +97,31 @@ echo '{"model":{"display_name":"Opus 4.6"},"context_window":{"used_percentage":9
 ```
 Expected: 9 filled + 1 empty block in red.
 
-- [ ] **Step 6: Verify edge case — null percentage**
+- [ ] **Step 7: Verify edge case — 0%**
+
+Run:
+```bash
+echo '{"model":{"display_name":"Opus 4.6"},"context_window":{"used_percentage":0}}' | ~/.claude/statusline.zsh
+```
+Expected: `Opus 4.6` in gray, 10 empty blocks in green.
+
+- [ ] **Step 8: Verify edge case — 100%**
+
+Run:
+```bash
+echo '{"model":{"display_name":"Opus 4.6"},"context_window":{"used_percentage":100}}' | ~/.claude/statusline.zsh
+```
+Expected: 10 filled blocks in red.
+
+- [ ] **Step 9: Verify edge case — over 100% (clamping)**
+
+Run:
+```bash
+echo '{"model":{"display_name":"Opus 4.6"},"context_window":{"used_percentage":115}}' | ~/.claude/statusline.zsh
+```
+Expected: 10 filled blocks in red (clamped, no extra characters).
+
+- [ ] **Step 10: Verify edge case — null percentage**
 
 Run:
 ```bash
@@ -100,7 +129,7 @@ echo '{"model":{"display_name":"Sonnet 4.6"},"context_window":{}}' | ~/.claude/s
 ```
 Expected: `Sonnet 4.6` in gray, 10 empty blocks in green.
 
-- [ ] **Step 7: Verify edge case — malformed input**
+- [ ] **Step 11: Verify edge case — malformed input**
 
 Run:
 ```bash
@@ -108,7 +137,7 @@ echo 'not json' | ~/.claude/statusline.zsh; echo "exit: $?"
 ```
 Expected: no output, exit code 0.
 
-- [ ] **Step 8: Commit the script in the .claude submodule**
+- [ ] **Step 12: Commit the script in the .claude submodule**
 
 ```bash
 git -C .claude add statusline.zsh
@@ -166,6 +195,11 @@ git add .claude
 git commit -m "chore: update .claude submodule"
 ```
 
-- [ ] **Step 3: Verify statusline works in a live Claude Code session**
+- [ ] **Step 3: Run `just check` to verify nothing is broken**
+
+Run: `just check`
+Expected: all checks pass.
+
+- [ ] **Step 4: Verify statusline works in a live Claude Code session**
 
 Restart Claude Code (or start a new session) and confirm the statusline shows the model name and a colored progress bar at the bottom of the terminal.
