@@ -68,9 +68,16 @@ printf '\033[38;5;8m%s\033[0m  %b%s\033[0m' "$model" "$color" "$bar"
 
 Run: `chmod +x .claude/statusline.zsh`
 
-- [ ] **Step 3: Create symlink via stow**
+- [ ] **Step 3: Clear xattrs blocking stow, then create symlink**
 
-Run: `just stow`
+macOS adds `com.apple.provenance` xattr to symlinks, which makes GNU Stow
+not recognize them as its own. Strip before restow:
+
+```bash
+xattr -d com.apple.provenance ~/.claude/settings.json 2>/dev/null
+xattr -d com.apple.provenance ~/.claude/CLAUDE.md 2>/dev/null
+just stow
+```
 Verify: `ls -la ~/.claude/statusline.zsh` — should be a symlink to `../GitHub/dotfiles/.claude/statusline.zsh`
 
 - [ ] **Step 4: Verify — green bar (25%)**
