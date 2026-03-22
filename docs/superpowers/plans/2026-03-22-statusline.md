@@ -12,6 +12,43 @@
 
 ---
 
+### Task 0: Fix `just stow` — missing `-t ~` flag
+
+The `stow` recipe in Justfile uses `stow --restow --no-folding .` without `-t ~`,
+so GNU Stow targets the parent directory (`~/GitHub`) instead of home (`~`).
+The init script (`scripts/lib/symlinks.sh:79`) correctly uses `-t ~`.
+This also affects `stow-status`.
+
+**Files:**
+- Modify: `Justfile:29-34`
+
+- [ ] **Step 1: Fix stow and stow-status recipes**
+
+Change in `Justfile`:
+```just
+# Apply symlinks via stow
+stow:
+    stow --restow --no-folding -t ~ .
+
+# Show symlink status
+stow-status:
+    stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
+```
+
+- [ ] **Step 2: Verify `just stow` works**
+
+Run: `just stow`
+Expected: no errors, no conflicts. Symlinks at `~` point to dotfiles repo.
+
+- [ ] **Step 3: Commit the fix**
+
+```bash
+git add Justfile
+git commit -m "fix(stow): add missing -t ~ flag to stow and stow-status recipes"
+```
+
+---
+
 ### Task 1: Create the statusline script
 
 **Files:**
@@ -68,16 +105,9 @@ printf '\033[38;5;8m%s\033[0m  %b%s\033[0m' "$model" "$color" "$bar"
 
 Run: `chmod +x .claude/statusline.zsh`
 
-- [ ] **Step 3: Clear xattrs blocking stow, then create symlink**
+- [ ] **Step 3: Create symlink via stow**
 
-macOS adds `com.apple.provenance` xattr to symlinks, which makes GNU Stow
-not recognize them as its own. Strip before restow:
-
-```bash
-xattr -d com.apple.provenance ~/.claude/settings.json 2>/dev/null
-xattr -d com.apple.provenance ~/.claude/CLAUDE.md 2>/dev/null
-just stow
-```
+Run: `just stow` (requires Task 0 fix to be applied first)
 Verify: `ls -la ~/.claude/statusline.zsh` — should be a symlink to `../GitHub/dotfiles/.claude/statusline.zsh`
 
 - [ ] **Step 4: Verify — green bar (25%)**
@@ -210,3 +240,29 @@ Expected: all checks pass.
 - [ ] **Step 4: Verify statusline works in a live Claude Code session**
 
 Restart Claude Code (or start a new session) and confirm the statusline shows the model name and a colored progress bar at the bottom of the terminal.
+
+---
+
+### Task 4: Document gotchas discovered during design
+
+Non-obvious pitfalls found during spec review that must be documented so future
+contributors don't repeat them.
+
+**Files:**
+- Modify: `CLAUDE.md` (add stow gotcha)
+- Modify: `.claude/statusline.zsh` (in-script comments — already covered in Task 1)
+
+- [ ] **Step 1: Add stow `-t ~` gotcha to CLAUDE.md**
+
+Add to the "Key Concepts" section in `CLAUDE.md`:
+
+```markdown
+- **GNU Stow requires `-t ~`** — without it, stow targets the parent directory of the repo, not `$HOME`. The canonical invocation is `stow --restow --no-folding -t ~ .`. The `scripts/lib/symlinks.sh:run_stow()` function is the source of truth for stow flags.
+```
+
+- [ ] **Step 2: Commit docs update**
+
+```bash
+git add CLAUDE.md
+git commit -m "docs: add stow -t ~ gotcha to CLAUDE.md"
+```
