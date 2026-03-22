@@ -27,6 +27,11 @@ Opus 4.6  ▰▰▰▰▰▱▱▱▱▱
 
 **File:** `.claude/statusline.zsh` (inside the `.claude` git submodule, symlinked to `~/.claude/`)
 
+**Prerequisites:**
+- Shebang: `#!/usr/bin/env zsh`
+- File must be executable (`chmod +x`)
+- Committed to the `.claude` submodule repo, not the parent dotfiles repo
+
 **Data flow:**
 
 1. Claude Code pipes session JSON to script's stdin
@@ -42,20 +47,26 @@ Opus 4.6  ▰▰▰▰▰▱▱▱▱▱
 ### JSON Parsing (one jq invocation)
 
 ```zsh
-read -r model pct <<< "$(jq -r '[.model.display_name, (.context_window.used_percentage // 0 | floor)] | @tsv')"
+IFS=$'\t' read -r model pct <<< "$(jq -r '[.model.display_name, (.context_window.used_percentage // 0 | floor)] | @tsv' 2>/dev/null)"
 ```
 
+- `IFS=$'\t'` — split on tab only (model names contain spaces, e.g. "Opus 4.6")
 - `@tsv` produces tab-separated output for `read` to split
 - `// 0` handles null (before first API call)
 - `floor` ensures integer
+- `2>/dev/null` suppresses errors if `jq` is missing or input is malformed
+
+If `model` is empty after parsing, exit silently (no output).
 
 ### Bar Calculation
 
 ```zsh
 (( filled = pct / 10 ))
+(( filled > 10 )) && filled=10
 ```
 
-ZSH integer arithmetic: 52% → 5 filled blocks.
+ZSH integer arithmetic: 52% → 5 filled blocks. Clamped to 10 max
+in case the API ever reports > 100%.
 
 ### Color Selection
 
@@ -89,7 +100,8 @@ printf '\033[38;5;8m%s\033[0m  %b%s\033[0m' "$model" "$color" "$bar"
 | `used_percentage` is null (pre-first API call) | `pct` = 0, bar is 10 × `▱`, green |
 | `used_percentage` = 0 | 10 × `▱`, green |
 | `used_percentage` = 100 | 10 × `▰`, red |
-| `jq` not installed | Script fails silently (no output in statusline) |
+| `used_percentage` > 100 | Clamped to 10 filled blocks, red |
+| `jq` missing or stdin malformed | jq stderr suppressed via `2>/dev/null`; `read` gets empty strings; script exits early with no output |
 
 ## Files Changed
 
