@@ -24,3 +24,6 @@ export https_proxy="$_proxy" HTTPS_PROXY="$_proxy"
 export all_proxy="$_proxy" ALL_PROXY="$_proxy"
 export no_proxy="$_no_proxy" NO_PROXY="$_no_proxy"
 unset _proxy _no_proxy
+
+# 1Password SSH Agent
+export SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
