@@ -62,16 +62,30 @@ ensure_tpm() {
 # Plugin Functions
 # =============================================================================
 
-TMUX_PLUGINS=(
-    tmux              # Catppuccin theme
-    tmux-sensible
-    tmux-yank
-)
+# Parse plugin directory names from tmux.conf (single source of truth).
+# Reads `set -g @plugin 'user/repo'` lines, extracts basename (repo).
+# Excludes TPM itself — it's managed separately by ensure_tpm.
+plugins_from_conf() {
+    awk '/^[[:space:]]*set(-option)?[[:space:]]+-g[[:space:]]+@plugin/ {
+        gsub(/['\''"]/, "")
+        split($4, parts, "/")
+        name = parts[length(parts)]
+        if (name != "tpm") print name
+    }' "$TMUX_CONF"
+}
 
 # Check if a plugin is installed
 is_plugin_installed() {
     local plugin="$1"
     [[ -d "$HOME/.config/tmux/plugins/$plugin" ]]
+}
+
+# Check if all plugins from the list are installed
+all_plugins_installed() {
+    local plugin
+    for plugin in "$@"; do
+        is_plugin_installed "$plugin" || return 1
+    done
 }
 
 # Install all plugins via TPM
@@ -80,28 +94,37 @@ install_plugins() {
         return 0
     fi
 
-    if [[ -x "$TPM_DIR/bin/install_plugins" ]]; then
-        "$TPM_DIR/bin/install_plugins" 2>&1 | while read -r line; do
-            log_verbose "$line"
-        done
-        return 0
-    else
+    if [[ ! -x "$TPM_DIR/bin/install_plugins" ]]; then
         return 1
     fi
+
+    # TPM needs TMUX_PLUGIN_MANAGER_PATH in the tmux server environment.
+    # Normally set by `run tpm/tpm` during config load; this is a fallback
+    # for cases where config hasn't been sourced yet.
+    if ! tmux set-environment -g TMUX_PLUGIN_MANAGER_PATH "${TPM_DIR%/tpm}/" 2>/dev/null; then
+        log_verbose "No tmux server — TPM will start its own"
+    fi
+
+    local output
+    output="$("$TPM_DIR/bin/install_plugins" 2>&1)"
+    local rc=$?
+
+    if [[ -n "$output" ]]; then
+        while IFS= read -r line; do
+            log_verbose "$line"
+        done <<< "$output"
+    fi
+
+    return $rc
 }
 
 # Ensure all plugins are installed
 ensure_plugins() {
-    # Check if all plugins are installed
-    local all_installed=true
-    for plugin in "${TMUX_PLUGINS[@]}"; do
-        if ! is_plugin_installed "$plugin"; then
-            all_installed=false
-            break
-        fi
-    done
+    local plugins=()
+    local _p
+    while IFS= read -r _p; do plugins+=("$_p"); done < <(plugins_from_conf)
 
-    if [[ "$all_installed" == "true" ]]; then
+    if all_plugins_installed "${plugins[@]}"; then
         log_success "Tmux plugins"
         return 0
     fi
@@ -114,7 +137,9 @@ ensure_plugins() {
     log_warning "Tmux plugins not installed"
     log_action "Installing..."
 
-    if install_plugins; then
+    install_plugins
+
+    if all_plugins_installed "${plugins[@]}"; then
         log_success "Tmux plugins"
         return 0
     else
@@ -251,7 +276,9 @@ check_plugins() {
     fi
 
     # Plugins
-    for plugin in "${TMUX_PLUGINS[@]}"; do
+    local plugins=() plugin
+    while IFS= read -r plugin; do plugins+=("$plugin"); done < <(plugins_from_conf)
+    for plugin in "${plugins[@]}"; do
         ((total++))
         if is_plugin_installed "$plugin"; then
             ((passed++))

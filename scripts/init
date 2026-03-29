@@ -116,11 +116,11 @@ if ! ensure_all_symlinks; then
     ((failed++))
 fi
 
+# Load config (before plugins — TPM sets TMUX_PLUGIN_MANAGER_PATH on load)
+ensure_config_loaded
+
 # Plugins
 ensure_plugins
-
-# Load config
-ensure_config_loaded
 
 # -----------------------------------------------------------------------------
 # Dock
