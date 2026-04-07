@@ -1,3 +1,5 @@
+> **Superseded** by [statusline-v2](2026-04-07-statusline-v2-design.md).
+
 # Claude Code Statusline Script
 
 ## Summary
