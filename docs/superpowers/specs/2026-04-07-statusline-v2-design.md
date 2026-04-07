@@ -37,7 +37,7 @@ Empty statusline (exit 0) when no elements qualify.
 
 #### 3. Repository branches (project-specific)
 
-Only when `cwd` == `/Users/andreyvavilov/GitHub/mytonwallet-org`.
+Only when `cwd` starts with `/Users/andreyvavilov/GitHub/mytonwallet-org` (prefix match — works from any subdirectory).
 
 Three repositories checked:
 
