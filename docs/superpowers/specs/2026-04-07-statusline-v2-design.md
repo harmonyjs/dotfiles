@@ -31,9 +31,18 @@ Empty statusline (exit 0) when no elements qualify.
 
 #### 2. Context usage label
 
-- `used_tokens >= 200000` → **"200k"** — red background, white bold
-- `used_tokens >= 100000` → **"100k"** — bold orange
-- `used_tokens < 100000` → nothing
+One gate per 100k tokens: `gate = floor(used_tokens / 100000) * 100`.
+Label text is `<gate>k`; style escalates with fill.
+
+| Gate | Style |
+|------|-------|
+| 100k | yellow, bold |
+| 200k | red, bold |
+| 300k | yellow background, white bold |
+| 400k | red background, white bold |
+| 500k…1000k | black background, white bold |
+
+`used_tokens < 100000` → nothing.
 
 #### 3. Repository branches (project-specific)
 
@@ -55,8 +64,11 @@ Branch `main` or `master` → skip. Otherwise → `<short>::<branch>` in dim gra
 | Element | Style | ANSI code |
 |---------|-------|-----------|
 | Model name | dim gray | `\033[38;5;8m` |
-| "100k" label | bold orange | `\033[1;38;5;208m` |
-| "200k" label | red bg, white bold | `\033[41;1;37m` |
+| 100k gate | yellow, bold | `\033[1;33m` |
+| 200k gate | red, bold | `\033[1;31m` |
+| 300k gate | yellow bg, white bold | `\033[43;1;37m` |
+| 400k gate | red bg, white bold | `\033[41;1;37m` |
+| 500k+ gate | black bg, white bold | `\033[40;1;37m` |
 | Branch info | dim gray | `\033[38;5;8m` |
 | Middle dot | dim gray | `\033[38;5;8m` |
 | Reset | — | `\033[0m` |
@@ -71,6 +83,8 @@ Middle dot separator always dim gray.
 | Opus 1M, 50k tokens, not mytonwallet | *(empty)* |
 | Opus 1M, 150k tokens, not mytonwallet | `100k` |
 | Opus 1M, 250k tokens, not mytonwallet | `200k` |
+| Opus 1M, 550k tokens, not mytonwallet | `500k` |
+| Opus 1M, 1000k tokens, not mytonwallet | `1000k` |
 | Sonnet, 30k tokens, not mytonwallet | `Sonnet` |
 | Sonnet, 250k tokens, not mytonwallet | `Sonnet · 200k` |
 | Opus 1M, 50k, mytonwallet, backend on feature | `backend::feat/campaign` |
