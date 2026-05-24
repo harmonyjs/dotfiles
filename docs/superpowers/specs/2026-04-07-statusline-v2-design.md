@@ -46,18 +46,37 @@ Label text is `<gate>k`; style escalates with fill.
 
 #### 3. Repository branches (project-specific)
 
-Only when `cwd` starts with `/Users/andreyvavilov/GitHub/mytonwallet-org` (prefix match — works from any subdirectory).
+Shown only when `cwd` starts with `/Users/andreyvavilov/GitHub/mytonwallet-org` (prefix match — works from any subdirectory).
 
-Three repositories checked:
+**Discovery.** Every git repository directly under `mytonwallet-org/` is scanned via
+`git -C <dir> branch --show-current`. A repo on `main` or `master` is skipped; the rest
+are displayed. The label is the directory name with a leading `mytonwallet-` stripped
+(`mytonwallet-dev` → `dev`).
 
-| Directory | Short name |
-|-----------|-----------|
-| `mytonwallet-dev` | `dev` |
-| `mytonwallet-backend` | `backend` |
-| `mytonwallet-deploy` | `deploy` |
+**Width-budgeted compaction.** The repo segment must fit within `MTW_REPO_BUDGET` visible
+characters (default 100). An escalation ladder applies progressively lossier transforms
+and stops at the lowest stage whose rendered segment fits the budget:
 
-For each: `git -C <path> branch --show-current 2>/dev/null`.
-Branch `main` or `master` → skip. Otherwise → `<short>::<branch>` in dim gray.
+| Stage | Transform |
+|-------|-----------|
+| 0 | `<label>::<branch>` in full |
+| 1 | strip the branch's `type/` prefix (everything up to the last `/`) |
+| 2 | truncate the branch at a word boundary (`-._/`) to an adaptive target |
+| 3 | truncate the branch with an ellipsis to the adaptive target |
+| 4 | replace the label with a minimal unique code |
+| 5 | drop trailing repos, collapsing the remainder into a `+M` counter |
+
+The adaptive branch target is `budget/N − labelWidth − 2`, floored at `MTW_BRANCH_MIN`
+(default 6): few repos keep long branch names, many repos shrink them.
+
+**Minimal unique label code (stage 4).** Each label starts as its first letter. Codes
+that collide are escalated — a name containing `-` or `.` switches to its token initials
+(`dev-fix-snapshot` → `dfs`), a name without separators extends one character at a time
+(`deploy` → `dep`). Uniqueness is resolved against *every* git repo under
+`mytonwallet-org`, not just the displayed ones, so a repo's code is stable across
+renders. Computed lazily — only when stage 4 is reached.
+
+Each rendered entry (and the `+M` counter) is dim gray.
 
 ## ANSI Styling
 
@@ -107,7 +126,13 @@ Middle dot separator always dim gray.
 
 Single file: `.claude/statusline.zsh` (in `.claude` git submodule).
 No external dependencies beyond `jq` and `git`.
-No loops for element assembly — conditional appends to zsh array, single printf at the end.
+
+Model, context, and overtime elements are conditional appends to a zsh array. The repo
+segment is assembled by a compaction ladder built from helper functions: `_render`
+(build entries for a stage), `_seg_width` (visible width), `_word_trunc` / `_ell_trunc`
+(branch truncation), `_candidate` / `_compute_aliases` (minimal unique label codes).
+Helpers communicate via globals to keep the hot path free of subshell forks. Single
+printf at the end.
 
 ## Files Changed
 
