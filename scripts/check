@@ -103,7 +103,7 @@ if [[ -f "$BREWFILE" ]]; then
         # Show which packages are missing
         log_error "Some Brewfile packages missing"
         if [[ "$VERBOSE" == "true" ]]; then
-            brew bundle check --file="$BREWFILE" --verbose 2>&1 | grep "^→" | while read -r line; do
+            brew bundle check --file="$BREWFILE" --no-upgrade --verbose 2>&1 | grep "^→" | while read -r line; do
                 echo "  $line"
             done || true
         fi

@@ -16,29 +16,61 @@ This is my minimal yet powerful terminal setup for macOS with tmux + Alacritty. 
 
 ## Principles
 
-**Zero-friction setup** — Clone, run `just init`, and everything works. No manual steps, no "install this separately" instructions. If it's in the setup, it's automated.
+**Zero-friction setup** — Clone, run `just init`, and the CLI/terminal environment works. The one unavoidable manual step is installing 1Password desktop from its official `.dmg` (`bootstrap` pauses until that's done), because the SSH agent it provides has to exist before any submodule or GitHub operation.
 
 **Reproducibility** — `just check` passes 100% on any fresh macOS machine. The setup is deterministic and verified by automated checks.
 
+**Curated tool sourcing** — Homebrew is the package manager for CLIs, fonts, and headless system utilities. Desktop GUI apps (editors, IDEs, messengers, browsers, productivity, 1Password) are installed from their official `.dmg`, so updates ship through the vendor's native channel.
+
 ## Quick Start
 
+If you already have an existing macOS environment (Homebrew, git, SSH) and just want to apply these dotfiles:
+
 ```bash
-git clone https://github.com/harmonyjs/dotfiles.git ~/dotfiles
-cd ~/dotfiles
+git clone https://github.com/harmonyjs/dotfiles.git ~/GitHub/dotfiles
+cd ~/GitHub/dotfiles
 just init
 ```
 
-That's it! The `init` command handles everything automatically:
+The `init` command handles the bulk of setup:
 - Installs all packages from `Brewfile` via `brew bundle`
-- Initializes git submodules
-- Creates all symlinks
+- Initializes git submodules (including `.claude/`, and `.private/` if you have access)
+- Creates all symlinks via stow
 - Installs tmux plugins
+
+## Fresh macOS Bootstrap
+
+On a brand-new Mac (or after a clean install) where Homebrew, Xcode CLT and 1Password are not yet present, use `bootstrap` instead of `init`. It walks from a blank macOS install to a fully configured environment in one command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/harmonyjs/dotfiles/main/scripts/bootstrap \
+  | bash -s -- https://github.com/<your-user>/dotfiles.git
+```
+
+What `bootstrap` does:
+
+1. Caches `sudo` ticket for the run
+2. Installs Xcode Command Line Tools (GUI prompt — accept it)
+3. Installs Homebrew
+4. Clones the dotfiles repo over HTTPS (SSH not yet available)
+5. Installs **1Password CLI** via Homebrew
+6. **Manual gate:** prompts you to download 1Password desktop from <https://1password.com/downloads/mac/>, sign in, enable the SSH agent + git commit signing in Settings → Developer, and add your SSH key to GitHub as **both** auth and signing key
+7. Switches the dotfiles remote `origin` from HTTPS to SSH (so submodules can fetch over SSH)
+8. Initializes private submodules
+9. Runs `scripts/init` (Brewfile, symlinks, plugins)
+10. Runs `scripts/post-install` (TouchID for sudo, SSH known_hosts, hostname prompt)
+
+**Why is 1Password desktop a manual step?** This repo treats Homebrew as the package manager for CLIs, fonts, and headless system utilities — not for desktop GUI apps. Desktop apps (editors, IDEs, messengers, browsers, 1Password) are installed from their official `.dmg` so updates flow through the vendor's native channel. `bootstrap` pauses at step 6 until 1Password is installed and signed in, because the SSH agent it provides is what every subsequent step relies on.
+
+**Forking this repo?** Pass your fork's URL as the script argument (or set `DOTFILES_REPO=<url>` before running). The HTTPS → SSH remote switch is derived from the URL you supply, no hardcoded paths.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `just init` | Initialize or repair setup |
+| `just bootstrap <git-url>` | Fresh macOS: Xcode CLT, Homebrew, clone, 1Password gate, init, post-install |
+| `just init` | Initialize or repair setup (idempotent) |
+| `just post-install` | One-time system tweaks (TouchID, known_hosts, hostname) |
 | `just check` | Verify configuration |
 | `just preview` | Preview what init would do |
 | `just update` | Pull latest updates |
@@ -136,9 +168,17 @@ stow -v -t ~ --no-folding .
 
 ### Private Dotfiles
 
-The `.private/` submodule contains machine-specific private configurations:
-- `.zshrc.local` - Machine-specific zsh configuration
-- `.zsh_history` - Shell command history
+The `.private/` submodule contains machine-specific or identity-bearing configurations that don't belong in a public repo:
+
+- `.zshrc.local` — machine-specific zsh configuration
+- `.zsh_history` — shell command history
+- `.ssh/config`, `.ssh/*.pub` — SSH client config and your own public keys
+- `.config/git/config`, `.config/git/allowed_signers` — git user identity and signing trust
+- `.docker/daemon.json` — Docker daemon configuration
+- `.codex/config.toml`, `.gemini/settings.json` — per-tool AI assistant configs
+- `.config/imgcluster/.env`, `.config/tg-exporter/.env`, `.config/kcat.conf` — service credentials
+
+This split is deliberate: the public dotfiles repo curates **tool choices and universal patterns** that anyone can fork and apply; `.private` holds **personal identity, hostnames, and credentials** that are only meaningful on Andrey's machines.
 
 Private files are handled automatically by `just init`. If you have access to the private repository, initialize it manually:
 

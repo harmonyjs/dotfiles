@@ -119,12 +119,14 @@ ensure_dependency() {
 # Brewfile Functions
 # =============================================================================
 
-# Check if all Brewfile packages are installed
+# Check if all Brewfile packages are installed.
+# Uses --no-upgrade so the check measures presence, not freshness:
+# `brew outdated` is a separate, churning concern and shouldn't flake `just check`.
 check_brewfile() {
     if [[ ! -f "$BREWFILE" ]]; then
         return 1
     fi
-    if brew bundle check --file="$BREWFILE" &>/dev/null; then
+    if brew bundle check --file="$BREWFILE" --no-upgrade &>/dev/null; then
         return 0
     else
         return 1

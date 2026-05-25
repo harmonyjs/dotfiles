@@ -15,18 +15,34 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 - **GNU Stow requires `-t ~`** — without it, stow targets the parent directory of the repo, not `$HOME`. The canonical invocation is `stow --restow --no-folding -t ~ .`. The `scripts/lib/symlinks.sh:run_stow()` function is the source of truth for stow flags.
 - **`.stow-local-ignore`** defines files excluded from symlinking
 - **`--no-folding`** flag required for `.claude` directory
+- **`./scripts/bootstrap`** (or `just bootstrap <git-url>`) — entrypoint for a brand-new Mac. Walks from blank macOS install to fully configured environment, with one manual gate for 1Password desktop. See [AGENTS.md](AGENTS.md) Scenario 4.
+- **`./scripts/init`** (or `just init`) — idempotent setup: brew bundle, submodules, stow, tmux plugins. Safe to re-run anytime.
+- **`./scripts/post-install`** (or `just post-install`) — one-shot system tweaks: TouchID for sudo via `/etc/pam.d/sudo_local`, SSH `known_hosts` for github.com/gitlab.com, interactive hostname prompt.
 - **`./scripts/check`** (or `just check`) validates entire setup
 - **`.claude/`** is a git submodule with Claude Code configs
+- **`.private/`** is a git submodule with identity-bearing and machine-specific configs (see Repository Structure below for current scope)
 
 ## Repository Structure
 
+**Public tree (this repo):**
 - `.config/tmux/tmux.conf` - tmux config (prefix: `Ctrl+Space`)
 - `.config/alacritty/alacritty.toml` - terminal with auto-start tmux session "main"
-- `.config/git/config` - git user config (in `.private` submodule)
 - `.zshenv` - environment variables and PATH (loaded always)
 - `.zprofile` - login shell config (intentionally empty)
 - `.zshrc` - interactive shell config (sources `.zsh_aliases` and `.zshrc.local`)
 - `.zsh_aliases` - command aliases
+- `Brewfile` - declarative Homebrew package manifest (CLIs, fonts, headless utilities only)
+- `scripts/bootstrap`, `scripts/init`, `scripts/post-install`, `scripts/check`, `scripts/update`, `scripts/dry-run` - lifecycle scripts (sourced from `scripts/lib/*.sh`)
+
+**`.private/` submodule (identity-bearing, machine-specific):**
+- `.config/git/config`, `.config/git/allowed_signers` - git identity + SSH signing trust
+- `.ssh/config`, `.ssh/*.pub` - SSH client config and public keys for this user
+- `.zshrc.local`, `.zsh_history` - per-machine shell state
+- `.docker/daemon.json` - Docker daemon configuration
+- `.codex/config.toml`, `.gemini/settings.json` - AI assistant per-tool configs
+- `.config/imgcluster/.env`, `.config/tg-exporter/.env`, `.config/kcat.conf` - service-specific env/configs
+
+**Public-vs-private rule:** anything that contains hostnames, public keys, email addresses, identity, credentials, or paths meaningful only to Andrey's specific machines belongs in `.private/`. The public tree is for curated tool choices and universal patterns that anyone can fork.
 
 ## ZSH Configuration Rules
 
@@ -53,11 +69,13 @@ ZSH files have strict separation of concerns. Follow these rules when modifying 
 
 ## Development Principles
 
-**No broken states** — Never commit changes that leave the setup non-functional. If something doesn't work via Homebrew, find an alternative and automate it. A comment saying "install manually" is not a solution.
+**No broken states** — Never commit changes that leave the setup non-functional. If something doesn't work via Homebrew, find an alternative and automate it. The only sanctioned manual gate is in `scripts/bootstrap` where the user installs 1Password desktop — and that gate is interactive, in-band, and clearly explained to the user; it is not a "go read the docs and figure it out" comment.
 
 **User-first thinking** — Every decision is made from the perspective of someone cloning this repo on a fresh machine. They shouldn't read code comments or debug why something didn't install.
 
-**Automation over documentation** — If an action can be automated, it must be automated. Documentation describes "how it works", not "what to do manually".
+**Automation over documentation** — If an action can be automated and the policy permits it, it must be automated. The cask-vs-dmg policy (see below) is an explicit exception: desktop GUI apps are intentionally installed manually because that's the curated update path, not because automation is infeasible.
+
+**Curated tool sourcing** — Homebrew is for CLIs, fonts, and headless system utilities. Desktop GUI apps (editors/IDEs, messengers, productivity, browsers, 1Password desktop, office suites) are installed from their official `.dmg`. When adding a new package: if it ships a GUI app you'd otherwise launch from Spotlight, do not add it as `cask "<name>"` to the Brewfile — note it in README/AGENTS or leave it implicit.
 
 **Attention to details** — Details matter: correct installation paths, clean directory structure, no warnings. Quality is built from details.
 
