@@ -5,9 +5,18 @@
 default:
     @just --list
 
-# Initialize or repair dotfiles setup
+# Fresh-macOS bootstrap: Xcode CLT, Homebrew, clone, 1Password gate, init, post-install
+# Usage: just bootstrap <git-url>   (or auto-detect from existing clone)
+bootstrap *ARGS:
+    ./scripts/bootstrap {{ARGS}}
+
+# Initialize or repair dotfiles setup (idempotent)
 init *ARGS:
     ./scripts/init {{ARGS}}
+
+# One-time system tweaks after init (TouchID, known_hosts, hostname)
+post-install *ARGS:
+    ./scripts/post-install {{ARGS}}
 
 # Verify dotfiles setup (read-only)
 check *ARGS:

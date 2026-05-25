@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# post-install - One-time system tweaks after scripts/init succeeds
+#
+# Idempotent: re-running is a no-op once each step is applied.
+# Anything that needs to be re-converged on every run belongs in
+# scripts/init, not here.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+
+parse_args "$@"
+
+echo "Post-install system tweaks..."
+
+# Note: we intentionally do NOT chsh away from the system /bin/zsh — modern
+# macOS ships a recent zsh and the dotfiles work against it. Add a `brew "zsh"`
+# entry to Brewfile and a chsh step here only if that ever changes.
+
+# -----------------------------------------------------------------------------
+# TouchID for sudo (survives in tmux thanks to pam_reattach)
+# -----------------------------------------------------------------------------
+# /etc/pam.d/sudo_local is the Apple-blessed override file on macOS 14+ — it
+# is sourced from /etc/pam.d/sudo and survives OS upgrades. Editing /etc/pam.d/sudo
+# directly used to be the standard advice but breaks on every system update.
+log_section "TouchID for sudo (tmux-safe)"
+SUDO_LOCAL=/etc/pam.d/sudo_local
+PAM_REATTACH="$(brew --prefix)/lib/pam/pam_reattach.so"
+
+if [[ ! -f "$PAM_REATTACH" ]]; then
+    log_warning "pam_reattach not installed (brew install pam-reattach) — skipping"
+else
+    DESIRED=$(cat <<EOF
+auth optional ${PAM_REATTACH}
+auth sufficient pam_tid.so
+EOF
+)
+    if [[ -f "$SUDO_LOCAL" ]] && diff -q <(echo "$DESIRED") "$SUDO_LOCAL" &>/dev/null; then
+        log_success "$SUDO_LOCAL already configured"
+    else
+        log_info "writing $SUDO_LOCAL"
+        [[ "$DRY_RUN" == "true" ]] || echo "$DESIRED" | sudo tee "$SUDO_LOCAL" >/dev/null
+        log_success "TouchID for sudo configured"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
+# Pre-seed known_hosts for git remotes (avoids first-push TOFU prompt)
+# -----------------------------------------------------------------------------
+log_section "SSH known_hosts"
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+touch ~/.ssh/known_hosts
+chmod 600 ~/.ssh/known_hosts
+
+for host in github.com gitlab.com; do
+    if grep -q "^$host " ~/.ssh/known_hosts 2>/dev/null \
+        || grep -q "^\[$host\]" ~/.ssh/known_hosts 2>/dev/null; then
+        log_success "$host already known"
+    else
+        log_info "ssh-keyscan $host"
+        [[ "$DRY_RUN" == "true" ]] || ssh-keyscan -t ed25519,rsa "$host" >> ~/.ssh/known_hosts 2>/dev/null
+        log_success "$host added"
+    fi
+done
+
+# -----------------------------------------------------------------------------
+# Hostname (interactive — only if unset)
+# -----------------------------------------------------------------------------
+log_section "Hostname"
+current_name="$(scutil --get ComputerName 2>/dev/null || echo)"
+if [[ -n "$current_name" && "$current_name" != "Andreys-MacBook-Pro" && "$current_name" != *"MacBook"* ]]; then
+    # User likely already personalised it
+    log_success "ComputerName=$current_name (unchanged)"
+else
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "would prompt for new hostname"
+    elif [[ ! -t 0 ]]; then
+        log_warning "non-interactive — skip hostname setup"
+    else
+        read -rp "Set new hostname (empty to skip): " new_name
+        if [[ -n "$new_name" ]]; then
+            sudo scutil --set ComputerName  "$new_name"
+            sudo scutil --set HostName      "$new_name"
+            sudo scutil --set LocalHostName "$new_name"
+            log_success "hostname → $new_name"
+        else
+            log_info "skipped"
+        fi
+    fi
+fi
+
+echo
+log_success "post-install complete"

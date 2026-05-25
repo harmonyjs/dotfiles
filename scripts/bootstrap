@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+# bootstrap - First-run setup on a fresh macOS
+#
+# Pre-clone phase: Xcode CLT, Homebrew, git clone over HTTPS,
+# 1Password manual setup gate, switch remote to SSH, then hand off
+# to scripts/init for the idempotent part of the setup.
+#
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/<you>/dotfiles/main/scripts/bootstrap \
+#     | bash -s -- https://github.com/<you>/dotfiles.git
+#
+#   # or, after manual clone:
+#   ./scripts/bootstrap                    # auto-detect URL from `git remote`
+#   ./scripts/bootstrap <git-url>          # explicit URL
+#   DOTFILES_REPO=<git-url> ./scripts/bootstrap
+
+set -euo pipefail
+
+# -----------------------------------------------------------------------------
+# Config
+# -----------------------------------------------------------------------------
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/GitHub/dotfiles}"
+DOTFILES_REPO="${1:-${DOTFILES_REPO:-}}"
+
+# Auto-detect from existing clone if not supplied
+if [[ -z "$DOTFILES_REPO" && -d "$DOTFILES_DIR/.git" ]]; then
+    DOTFILES_REPO="$(git -C "$DOTFILES_DIR" remote get-url origin)"
+fi
+
+if [[ -z "$DOTFILES_REPO" ]]; then
+    cat >&2 <<'EOF'
+Usage: bootstrap <git-url>
+   or: DOTFILES_REPO=<git-url> bootstrap
+
+Examples:
+  # Fresh machine, curl-pipe-bash:
+  curl -fsSL https://raw.githubusercontent.com/<you>/dotfiles/main/scripts/bootstrap \
+    | bash -s -- https://github.com/<you>/dotfiles.git
+
+  # Already cloned: URL auto-detected from `git remote`
+  ./scripts/bootstrap
+EOF
+    exit 1
+fi
+
+# Minimal logging (cannot source scripts/lib/* — pre-clone)
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+section() { echo; echo -e "${BLUE}━━━ $1 ━━━${NC}"; }
+ok()      { echo -e "${GREEN}✓${NC} $1"; }
+warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
+die()     { echo -e "${RED}✗${NC} $1" >&2; exit 1; }
+
+# -----------------------------------------------------------------------------
+# Step 1 — sudo keep-alive
+# -----------------------------------------------------------------------------
+# Asks for sudo once and keeps the ticket alive in the background until this
+# script exits, so the user is not prompted again mid-run.
+section "sudo"
+sudo -v
+( while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) 2>/dev/null &
+SUDO_KEEPALIVE_PID=$!
+trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
+ok "sudo ticket cached"
+
+# -----------------------------------------------------------------------------
+# Step 2 — Xcode Command Line Tools
+# -----------------------------------------------------------------------------
+section "Xcode Command Line Tools"
+if xcode-select -p &>/dev/null; then
+    ok "already installed"
+else
+    warn "installing — a GUI prompt will appear"
+    xcode-select --install || true
+    until xcode-select -p &>/dev/null; do sleep 5; done
+    ok "installed"
+fi
+
+# -----------------------------------------------------------------------------
+# Step 3 — Homebrew
+# -----------------------------------------------------------------------------
+section "Homebrew"
+if command -v brew &>/dev/null; then
+    ok "already installed"
+else
+    NONINTERACTIVE=1 /bin/bash -c \
+        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ok "installed"
+fi
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# -----------------------------------------------------------------------------
+# Step 4 — Clone dotfiles (HTTPS — SSH agent not yet configured)
+# -----------------------------------------------------------------------------
+section "Clone dotfiles"
+if [[ -d "$DOTFILES_DIR/.git" ]]; then
+    ok "already at $DOTFILES_DIR"
+else
+    mkdir -p "$(dirname "$DOTFILES_DIR")"
+    git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
+    ok "cloned to $DOTFILES_DIR"
+fi
+
+cd "$DOTFILES_DIR"
+
+# -----------------------------------------------------------------------------
+# Step 5 — Install 1Password CLI early
+# -----------------------------------------------------------------------------
+# 1Password desktop is installed manually from the official dmg (see Step 6)
+# — by policy, GUI apps don't come from brew cask. The CLI does, since it is
+# headless. Full Brewfile install happens later in scripts/init.
+section "1Password CLI"
+if ! brew list --cask 1password-cli &>/dev/null; then
+    brew install --cask 1password-cli
+fi
+ok "installed"
+
+# -----------------------------------------------------------------------------
+# Step 6 — Install + configure 1Password desktop (manual)
+# -----------------------------------------------------------------------------
+section "Install + configure 1Password (manual)"
+cat <<'MSG'
+
+  1. Download 1Password from https://1password.com/downloads/mac/
+     and drag 1Password.app into /Applications
+  2. Open 1Password.app and sign in (Secret Key + master password)
+  3. Settings → Developer → enable:
+       • Use the SSH agent
+       • Display key names when authorizing connections
+       • Use Git commit signing
+  4. In your vault: ensure an SSH Key item exists for git
+  5. On GitHub → Settings → SSH and GPG keys, add the public key
+     as BOTH "Authentication key" AND "Signing key"
+
+MSG
+read -rp "Press Enter once 1Password is installed, configured, and the key is on GitHub... " _
+
+# Smoke-check SSH agent socket
+AGENT_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+if [[ -S "$AGENT_SOCK" ]]; then
+    ok "1Password SSH agent socket is live"
+else
+    warn "agent socket not found at $AGENT_SOCK — continuing, but ssh will fall back"
+fi
+
+# -----------------------------------------------------------------------------
+# Step 7 — Switch dotfiles remote HTTPS → SSH
+# -----------------------------------------------------------------------------
+# Submodules are private and only accessible over SSH; flip origin first so
+# submodule init in step 8 can use the cached relative URLs.
+section "Switch remote to SSH"
+current_url="$(git -C "$DOTFILES_DIR" remote get-url origin)"
+if [[ "$current_url" == https://github.com/* ]]; then
+    path="${current_url#https://github.com/}"
+    path="${path%.git}.git"
+    ssh_url="git@github.com:${path}"
+    git -C "$DOTFILES_DIR" remote set-url origin "$ssh_url"
+    ok "origin → $ssh_url"
+else
+    ok "origin already on SSH"
+fi
+
+# -----------------------------------------------------------------------------
+# Step 8 — Submodule init (private repo, needs SSH)
+# -----------------------------------------------------------------------------
+section "Submodules"
+git -C "$DOTFILES_DIR" submodule update --init --recursive
+ok "initialised"
+
+# -----------------------------------------------------------------------------
+# Step 9 — Hand off to existing idempotent setup
+# -----------------------------------------------------------------------------
+section "scripts/init (deps, symlinks, plugins)"
+./scripts/init
+
+# -----------------------------------------------------------------------------
+# Step 10 — One-time system tweaks
+# -----------------------------------------------------------------------------
+section "scripts/post-install (one-time system tweaks)"
+./scripts/post-install
+
+echo
+ok "bootstrap complete — open a fresh terminal session"
