@@ -79,7 +79,6 @@ brew "qpdf"              # PDF transformation, inspection, and repair toolkit
 brew "typst"             # Modern typesetting system (LaTeX alternative)
 
 # Infrastructure
-cask "docker-desktop"    # Docker Desktop: containerization platform with GUI
 tap "hashicorp/tap"
 brew "hashicorp/tap/terraform"   # Infrastructure as Code tool for cloud provisioning
 brew "kubernetes-cli"    # kubectl: Kubernetes command-line client
