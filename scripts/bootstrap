@@ -1,66 +1,105 @@
 #!/usr/bin/env bash
 # bootstrap - First-run setup on a fresh macOS
 #
-# Pre-clone phase: Xcode CLT, Homebrew, git clone over HTTPS,
-# 1Password manual setup gate, switch remote to SSH, then hand off
-# to scripts/init for the idempotent part of the setup.
+# Pre-clone phase: Xcode CLT, Homebrew, git clone over HTTPS. Then a *conditional*
+# 1Password SSH gate (skipped when SSH already authenticates), submodule init,
+# and hand off to scripts/init — which converges the origin remote to SSH once
+# 1Password is ready — followed by scripts/post-install for one-time tweaks.
 #
-# Usage:
-#   curl -fsSL https://raw.githubusercontent.com/<you>/dotfiles/main/scripts/bootstrap \
-#     | bash -s -- https://github.com/<you>/dotfiles.git
-#
-#   # or, after manual clone:
-#   ./scripts/bootstrap                    # auto-detect URL from `git remote`
-#   ./scripts/bootstrap <git-url>          # explicit URL
-#   DOTFILES_REPO=<git-url> ./scripts/bootstrap
+# Idempotent: re-running re-converges; already-done steps are detected and
+# skipped. Two modes:
+#   --dry-run  preview every step, change nothing
+#   -y/--yes   unattended — never wait on a prompt; human/sudo-gated steps are
+#              skipped with a note instead of blocking.
 
 set -euo pipefail
 
 # -----------------------------------------------------------------------------
-# Config
+# Logging (minimal — cannot source scripts/lib/* pre-clone)
 # -----------------------------------------------------------------------------
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/GitHub/dotfiles}"
-DOTFILES_REPO="${1:-${DOTFILES_REPO:-}}"
-
-# Auto-detect from existing clone if not supplied
-if [[ -z "$DOTFILES_REPO" && -d "$DOTFILES_DIR/.git" ]]; then
-    DOTFILES_REPO="$(git -C "$DOTFILES_DIR" remote get-url origin)"
-fi
-
-if [[ -z "$DOTFILES_REPO" ]]; then
-    cat >&2 <<'EOF'
-Usage: bootstrap <git-url>
-   or: DOTFILES_REPO=<git-url> bootstrap
-
-Examples:
-  # Fresh machine, curl-pipe-bash:
-  curl -fsSL https://raw.githubusercontent.com/<you>/dotfiles/main/scripts/bootstrap \
-    | bash -s -- https://github.com/<you>/dotfiles.git
-
-  # Already cloned: URL auto-detected from `git remote`
-  ./scripts/bootstrap
-EOF
-    exit 1
-fi
-
-# Minimal logging (cannot source scripts/lib/* — pre-clone)
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 section() { echo; echo -e "${BLUE}━━━ $1 ━━━${NC}"; }
 ok()      { echo -e "${GREEN}✓${NC} $1"; }
 warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
 die()     { echo -e "${RED}✗${NC} $1" >&2; exit 1; }
+dry()     { echo -e "${YELLOW}⚠${NC} ${BLUE}[dry-run]${NC} would: $1"; }
+
+usage() {
+    cat <<'EOF'
+bootstrap - First-run setup on a fresh macOS
+
+Usage:
+  ./scripts/bootstrap [options] [git-url]
+  curl -fsSL .../scripts/bootstrap | bash -s -- [options] <git-url>
+
+Options:
+  -y, --yes        Unattended: never wait on a prompt. Human/sudo-gated steps
+                   (1Password setup, TouchID-for-sudo) are skipped with a note.
+  -n, --dry-run    Preview every step; make no changes.
+  -v, --verbose    Verbose; passed through to init/post-install.
+  -h, --help       Show this help.
+
+URL resolution: positional arg -> $DOTFILES_REPO -> `git remote` of an existing
+clone. The HTTPS -> SSH switch is derived from this URL (no hardcoded path).
+EOF
+}
 
 # -----------------------------------------------------------------------------
-# Step 1 — sudo keep-alive
+# Args
 # -----------------------------------------------------------------------------
-# Asks for sudo once and keeps the ticket alive in the background until this
-# script exits, so the user is not prompted again mid-run.
+ASSUME_YES=false
+DRY_RUN=false
+VERBOSE=false
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/GitHub/dotfiles}"
+DOTFILES_REPO="${DOTFILES_REPO:-}"
+_positional=()
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes)     ASSUME_YES=true ;;
+        -n|--dry-run) DRY_RUN=true ;;
+        -v|--verbose) VERBOSE=true ;;
+        -h|--help)    usage; exit 0 ;;
+        -*)           die "unknown option: $arg (see --help)" ;;
+        *)            _positional+=("$arg") ;;
+    esac
+done
+[[ ${#_positional[@]} -gt 0 ]] && DOTFILES_REPO="${_positional[0]}"
+
+# Auto-detect URL from an existing clone if not supplied
+if [[ -z "$DOTFILES_REPO" && -d "$DOTFILES_DIR/.git" ]]; then
+    DOTFILES_REPO="$(git -C "$DOTFILES_DIR" remote get-url origin)"
+fi
+if [[ -z "$DOTFILES_REPO" ]]; then
+    usage >&2
+    die "no repo URL given and none detected from an existing clone"
+fi
+
+[[ "$DRY_RUN" == "true" ]] && section "DRY-RUN — previewing, no changes will be made"
+
+# -----------------------------------------------------------------------------
+# Step 1 — sudo (only post-install's root-only tweak needs it)
+# -----------------------------------------------------------------------------
 section "sudo"
-sudo -v
-( while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) 2>/dev/null &
-SUDO_KEEPALIVE_PID=$!
-trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
-ok "sudo ticket cached"
+SUDO_KEEPALIVE_PID=""
+start_sudo_keepalive() {
+    ( while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) 2>/dev/null &
+    SUDO_KEEPALIVE_PID=$!
+    trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
+}
+if [[ "$DRY_RUN" == "true" ]]; then
+    dry "prime sudo ticket (only for post-install's TouchID-for-sudo tweak)"
+elif [[ "$ASSUME_YES" == "true" ]]; then
+    if sudo -n true 2>/dev/null; then
+        start_sudo_keepalive
+        ok "sudo ticket already cached — keep-alive started"
+    else
+        warn "no sudo ticket and -y set — post-install will skip TouchID-for-sudo (run 'sudo ./scripts/post-install' later)"
+    fi
+else
+    sudo -v
+    start_sudo_keepalive
+    ok "sudo ticket cached"
+fi
 
 # -----------------------------------------------------------------------------
 # Step 2 — Xcode Command Line Tools
@@ -68,6 +107,10 @@ ok "sudo ticket cached"
 section "Xcode Command Line Tools"
 if xcode-select -p &>/dev/null; then
     ok "already installed"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    dry "install Xcode Command Line Tools (GUI prompt)"
+elif [[ "$ASSUME_YES" == "true" && ! -r /dev/tty ]]; then
+    die "Xcode CLT missing and -y set without a terminal — its installer is a GUI prompt and can't run unattended. Run 'xcode-select --install' first."
 else
     warn "installing — a GUI prompt will appear"
     xcode-select --install || true
@@ -81,12 +124,17 @@ fi
 section "Homebrew"
 if command -v brew &>/dev/null; then
     ok "already installed"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    dry "install Homebrew (non-interactive)"
 else
     NONINTERACTIVE=1 /bin/bash -c \
         "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ok "installed"
 fi
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# Activate brew env when present (absent only on a fresh-machine dry-run)
+if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
 
 # -----------------------------------------------------------------------------
 # Step 4 — Clone dotfiles (HTTPS — SSH agent not yet configured)
@@ -94,6 +142,10 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 section "Clone dotfiles"
 if [[ -d "$DOTFILES_DIR/.git" ]]; then
     ok "already at $DOTFILES_DIR"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    dry "git clone $DOTFILES_REPO -> $DOTFILES_DIR"
+    warn "repo not present — dry-run can't preview the repo-dependent steps (lib, gate, init, post-install). Re-run --dry-run after cloning, or run live."
+    exit 0
 else
     mkdir -p "$(dirname "$DOTFILES_DIR")"
     git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
@@ -102,6 +154,29 @@ fi
 
 cd "$DOTFILES_DIR"
 
+# The repo is now present, so the shared libs exist. Pull in the SSH-readiness
+# helpers (ssh_ready, OP_SSH_AGENT_SOCK) used by the state summary and the gate.
+# git.sh has no source-time dependency on common.sh; the log_* it references are
+# only hit by ensure_ssh_remote/check_ssh_remote, which bootstrap never calls.
+# shellcheck source=scripts/lib/git.sh
+source "$DOTFILES_DIR/scripts/lib/git.sh"
+
+# -----------------------------------------------------------------------------
+# State summary — show what's already in place before doing more work
+# -----------------------------------------------------------------------------
+section "Current state"
+command -v brew     &>/dev/null    && ok "Homebrew installed"      || warn "Homebrew missing"
+xcode-select -p     &>/dev/null    && ok "Xcode CLT installed"     || warn "Xcode CLT missing"
+[[ -d "$DOTFILES_DIR/.git" ]]      && ok "dotfiles cloned"         || warn "dotfiles not cloned"
+command -v stow     &>/dev/null    && ok "stow installed"          || warn "stow missing (brew bundle)"
+[[ -L "$HOME/.zshrc" ]]            && ok "symlinks present"        || warn "symlinks not created"
+[[ -S "$OP_SSH_AGENT_SOCK" ]]      && ok "1Password agent socket"  || warn "1Password agent socket missing"
+if ssh_ready; then ok "GitHub SSH auth works"; else warn "GitHub SSH not ready"; fi
+case "$(git -C "$DOTFILES_DIR" remote get-url origin 2>/dev/null || true)" in
+    https://*) warn "origin on HTTPS (init switches to SSH once ready)" ;;
+    *)         ok "origin on SSH" ;;
+esac
+
 # -----------------------------------------------------------------------------
 # Step 5 — Install 1Password CLI early
 # -----------------------------------------------------------------------------
@@ -109,16 +184,35 @@ cd "$DOTFILES_DIR"
 # — by policy, GUI apps don't come from brew cask. The CLI does, since it is
 # headless. Full Brewfile install happens later in scripts/init.
 section "1Password CLI"
-if ! brew list --cask 1password-cli &>/dev/null; then
+if brew list --cask 1password-cli &>/dev/null; then
+    ok "already installed"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    dry "brew install --cask 1password-cli"
+else
     brew install --cask 1password-cli
+    ok "installed"
 fi
-ok "installed"
 
 # -----------------------------------------------------------------------------
-# Step 6 — Install + configure 1Password desktop (manual)
+# Step 6 — Configure 1Password SSH (manual, only when not already working)
 # -----------------------------------------------------------------------------
-section "Install + configure 1Password (manual)"
-cat <<'MSG'
+# The only human-gated step: 1Password.app is installed from the official dmg
+# (GUI apps aren't brew casks here), so we can't automate it. But if SSH already
+# authenticates, the machine has been through this — skip the gate entirely.
+# Under --dry-run / -y, never block: preview or skip with a note.
+section "1Password SSH (manual gate)"
+if ssh_ready; then
+    ok "SSH via 1Password already works — skipping manual setup"
+elif [[ "$DRY_RUN" == "true" ]]; then
+    dry "prompt for 1Password manual setup (SSH not ready)"
+elif [[ "$ASSUME_YES" == "true" ]]; then
+    warn "unattended (-y) and SSH not ready — skipping the manual 1Password gate.
+   origin stays on HTTPS; re-run ./scripts/init after unlocking 1Password to switch to SSH."
+elif [[ ! -r /dev/tty ]]; then
+    die "1Password SSH is not ready and no terminal is available for the manual step.
+   Set up 1Password and add the key to GitHub, then re-run — or pass -y to proceed without SSH."
+else
+    cat <<'MSG'
 
   1. Download 1Password from https://1password.com/downloads/mac/
      and drag 1Password.app into /Applications
@@ -132,51 +226,64 @@ cat <<'MSG'
      as BOTH "Authentication key" AND "Signing key"
 
 MSG
-read -rp "Press Enter once 1Password is installed, configured, and the key is on GitHub... " _
-
-# Smoke-check SSH agent socket
-AGENT_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
-if [[ -S "$AGENT_SOCK" ]]; then
-    ok "1Password SSH agent socket is live"
-else
-    warn "agent socket not found at $AGENT_SOCK — continuing, but ssh will fall back"
+    # Read from the controlling terminal, not stdin — survives `curl | bash`,
+    # where stdin is the piped script rather than the user.
+    read -rp "Press Enter once 1Password is configured and the key is on GitHub... " _ </dev/tty
+    if ssh_ready; then
+        ok "SSH via 1Password now works"
+    else
+        warn "SSH still not ready — origin stays on HTTPS for now.
+   After unlocking 1Password / adding the key to GitHub, re-run ./scripts/init to switch."
+    fi
 fi
 
 # -----------------------------------------------------------------------------
-# Step 7 — Switch dotfiles remote HTTPS → SSH
+# Step 7 — Remote protocol: handled by scripts/init below
 # -----------------------------------------------------------------------------
-# Submodules are private and only accessible over SSH; flip origin first so
-# submodule init in step 8 can use the cached relative URLs.
-section "Switch remote to SSH"
-current_url="$(git -C "$DOTFILES_DIR" remote get-url origin)"
-if [[ "$current_url" == https://github.com/* ]]; then
-    path="${current_url#https://github.com/}"
-    path="${path%.git}.git"
-    ssh_url="git@github.com:${path}"
-    git -C "$DOTFILES_DIR" remote set-url origin "$ssh_url"
-    ok "origin → $ssh_url"
-else
-    ok "origin already on SSH"
-fi
+# The HTTPS → SSH switch lives in ensure_ssh_remote (scripts/lib/git.sh) and is
+# invoked by scripts/init in step 9. It flips origin to SSH only once SSH truly
+# authenticates and is safely re-runnable, so there's nothing to do here. Note:
+# submodules clone over the absolute HTTPS URLs in .gitmodules regardless of the
+# origin protocol, so this no longer needs to precede submodule init.
 
 # -----------------------------------------------------------------------------
-# Step 8 — Submodule init (private repo, needs SSH)
+# Step 8 — Submodule init
 # -----------------------------------------------------------------------------
 section "Submodules"
-git -C "$DOTFILES_DIR" submodule update --init --recursive
-ok "initialised"
+if [[ "$DRY_RUN" == "true" ]]; then
+    dry "git submodule update --init --recursive"
+else
+    git -C "$DOTFILES_DIR" submodule update --init --recursive
+    ok "initialised"
+fi
 
 # -----------------------------------------------------------------------------
 # Step 9 — Hand off to existing idempotent setup
 # -----------------------------------------------------------------------------
-section "scripts/init (deps, symlinks, plugins)"
-./scripts/init
+section "scripts/init (deps, symlinks, plugins, git remote)"
+init_args=()
+[[ "$DRY_RUN" == "true" ]] && init_args+=(--dry-run)
+[[ "$VERBOSE" == "true" ]] && init_args+=(--verbose)
+./scripts/init ${init_args[@]+"${init_args[@]}"}
 
 # -----------------------------------------------------------------------------
 # Step 10 — One-time system tweaks
 # -----------------------------------------------------------------------------
 section "scripts/post-install (one-time system tweaks)"
-./scripts/post-install
+pi_args=()
+[[ "$DRY_RUN" == "true" ]] && pi_args+=(--dry-run)
+[[ "$VERBOSE" == "true" ]] && pi_args+=(--verbose)
+# Under -y, run non-interactively (stdin from /dev/null) so post-install's
+# sudo-gated tweak self-skips instead of waiting on a password prompt.
+if [[ "$ASSUME_YES" == "true" ]]; then
+    ./scripts/post-install ${pi_args[@]+"${pi_args[@]}"} </dev/null
+else
+    ./scripts/post-install ${pi_args[@]+"${pi_args[@]}"}
+fi
 
 echo
-ok "bootstrap complete — open a fresh terminal session"
+if [[ "$DRY_RUN" == "true" ]]; then
+    ok "bootstrap dry-run complete — no changes made"
+else
+    ok "bootstrap complete — open a fresh terminal session"
+fi

@@ -19,6 +19,7 @@ source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
 source "$SCRIPT_DIR/lib/dock.sh"
+source "$SCRIPT_DIR/lib/git.sh"
 
 # Help message
 show_help() {
@@ -87,6 +88,16 @@ fi
 log_section "Submodules"
 if ! ensure_all_submodules; then
     ((failed++))
+fi
+
+# -----------------------------------------------------------------------------
+# Git remote (HTTPS → SSH, once 1Password is ready)
+# -----------------------------------------------------------------------------
+# Self-healing: re-running init after unlocking 1Password flips origin to SSH.
+# Non-fatal — HTTPS-while-blocked is a valid state, not a setup error.
+log_section "Git remote"
+if ! ensure_ssh_remote; then
+    failed=$((failed + 1))
 fi
 
 # -----------------------------------------------------------------------------

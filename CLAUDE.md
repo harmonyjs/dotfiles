@@ -15,10 +15,11 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 - **GNU Stow requires `-t ~`** — without it, stow targets the parent directory of the repo, not `$HOME`. The canonical invocation is `stow --restow --no-folding -t ~ .`. The `scripts/lib/symlinks.sh:run_stow()` function is the source of truth for stow flags.
 - **`.stow-local-ignore`** defines files excluded from symlinking
 - **`--no-folding`** flag required for `.claude` directory
-- **`./scripts/bootstrap`** (or `just bootstrap <git-url>`) — entrypoint for a brand-new Mac. Walks from blank macOS install to fully configured environment, with one manual gate for 1Password desktop. See [AGENTS.md](AGENTS.md) Scenario 4.
+- **`./scripts/bootstrap`** (or `just bootstrap <git-url>`) — entrypoint for a brand-new Mac. Walks from blank macOS install to fully configured environment, with one manual gate for 1Password desktop. The gate is **conditional** (skipped when SSH already authenticates). Supports `--dry-run` (preview, change nothing) and `-y/--yes` (unattended — never block on a prompt; human/sudo-gated steps skip with a note). See [AGENTS.md](AGENTS.md) Scenario 4.
 - **`./scripts/init`** (or `just init`) — idempotent setup: brew bundle, submodules, stow, tmux plugins. Safe to re-run anytime.
-- **`./scripts/post-install`** (or `just post-install`) — one-shot system tweaks: TouchID for sudo via `/etc/pam.d/sudo_local`, SSH `known_hosts` for github.com/gitlab.com, interactive hostname prompt.
+- **`./scripts/post-install`** (or `just post-install`) — one-shot system tweaks: TouchID for sudo via `/etc/pam.d/sudo_local` and SSH `known_hosts` for github.com. **Sudo-aware**: skips the root-only TouchID write (with a note) when sudo isn't available, e.g. under `bootstrap -y`. Does not touch the hostname.
 - **`./scripts/check`** (or `just check`) validates entire setup
+- **`scripts/lib/git.sh`** — `ssh_ready` (1Password agent holds a key **and** GitHub authenticates it; side-effect-free probe) and `ensure_ssh_remote` (converges `origin` HTTPS → SSH, but only once `ssh_ready` passes; never downgrades). `init` runs `ensure_ssh_remote` every time, so the remote **self-heals** to SSH after you unlock 1Password; `check` reports a "Git remote" section; `bootstrap`'s manual 1Password gate is skipped whenever `ssh_ready` already passes.
 - **`.claude/`** is a git submodule with Claude Code configs
 - **`.private/`** is a git submodule with identity-bearing and machine-specific configs (see Repository Structure below for current scope)
 

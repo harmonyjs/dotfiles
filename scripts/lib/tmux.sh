@@ -66,6 +66,9 @@ ensure_tpm() {
 # Reads `set -g @plugin 'user/repo'` lines, extracts basename (repo).
 # Excludes TPM itself — it's managed separately by ensure_tpm.
 plugins_from_conf() {
+    # Config may not be symlinked yet (e.g. dry-run on a fresh machine) —
+    # bail quietly instead of letting awk error "can't open file".
+    [[ -f "$TMUX_CONF" ]] || return 0
     awk '/^[[:space:]]*set(-option)?[[:space:]]+-g[[:space:]]+@plugin/ {
         gsub(/['\''"]/, "")
         split($4, parts, "/")
@@ -123,6 +126,18 @@ ensure_plugins() {
     local plugins=()
     local _p
     while IFS= read -r _p; do plugins+=("$_p"); done < <(plugins_from_conf)
+
+    # Empty list: either the config isn't symlinked yet, or it declares no
+    # plugins. Guard here so the "${plugins[@]}" expansions below never trip
+    # `set -u` on an empty array.
+    if [[ ${#plugins[@]} -eq 0 ]]; then
+        if [[ ! -f "$TMUX_CONF" ]]; then
+            log_warning "Tmux plugins — config not yet symlinked, would install on real run"
+        else
+            log_success "Tmux plugins (none configured)"
+        fi
+        return 0
+    fi
 
     if all_plugins_installed "${plugins[@]}"; then
         log_success "Tmux plugins"
@@ -276,9 +291,11 @@ check_plugins() {
     fi
 
     # Plugins
+    # Safe expansion (${arr[@]+…}): a bare "${plugins[@]}" on an empty array
+    # trips `set -u` when the tmux config isn't symlinked yet.
     local plugins=() plugin
     while IFS= read -r plugin; do plugins+=("$plugin"); done < <(plugins_from_conf)
-    for plugin in "${plugins[@]}"; do
+    for plugin in ${plugins[@]+"${plugins[@]}"}; do
         ((total++))
         if is_plugin_installed "$plugin"; then
             ((passed++))

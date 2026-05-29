@@ -19,6 +19,7 @@ source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
 source "$SCRIPT_DIR/lib/dock.sh"
+source "$SCRIPT_DIR/lib/git.sh"
 
 # Help message
 show_help() {
@@ -291,6 +292,25 @@ else
 fi
 
 read -r passed total <<< "$(parse_result "$submodules_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Git remote
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Git remote"
+fi
+
+gitremote_result=$(check_ssh_remote)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Git remote" "$gitremote_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$gitremote_result")"
 ((total_passed += passed)) || true
 ((total_checks += total)) || true
 [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true

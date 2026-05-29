@@ -12,6 +12,11 @@ source "$SCRIPT_DIR/lib/common.sh"
 
 parse_args "$@"
 
+# True when sudo runs without prompting (cached ticket or NOPASSWD). Lets the
+# root-only tweaks below skip gracefully under `bootstrap -y` instead of hanging
+# on a password prompt or dying under `set -e`.
+can_sudo() { sudo -n true 2>/dev/null; }
+
 echo "Post-install system tweaks..."
 
 # Note: we intentionally do NOT chsh away from the system /bin/zsh — modern
@@ -38,10 +43,16 @@ EOF
 )
     if [[ -f "$SUDO_LOCAL" ]] && diff -q <(echo "$DESIRED") "$SUDO_LOCAL" &>/dev/null; then
         log_success "$SUDO_LOCAL already configured"
-    else
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "would write $SUDO_LOCAL (needs sudo)"
+    elif can_sudo || [[ -t 0 ]]; then
+        # Either sudo is non-interactive-ready, or we have a terminal where it
+        # can prompt. Otherwise we'd hang/die — skip instead (see else).
         log_info "writing $SUDO_LOCAL"
-        [[ "$DRY_RUN" == "true" ]] || echo "$DESIRED" | sudo tee "$SUDO_LOCAL" >/dev/null
+        echo "$DESIRED" | sudo tee "$SUDO_LOCAL" >/dev/null
         log_success "TouchID for sudo configured"
+    else
+        log_warning "TouchID-for-sudo needs sudo and none is available unattended — skipped. Run: sudo ./scripts/post-install"
     fi
 fi
 
@@ -54,42 +65,18 @@ chmod 700 ~/.ssh
 touch ~/.ssh/known_hosts
 chmod 600 ~/.ssh/known_hosts
 
-for host in github.com gitlab.com; do
+for host in github.com; do
     if grep -q "^$host " ~/.ssh/known_hosts 2>/dev/null \
         || grep -q "^\[$host\]" ~/.ssh/known_hosts 2>/dev/null; then
         log_success "$host already known"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "would ssh-keyscan $host"
     else
         log_info "ssh-keyscan $host"
-        [[ "$DRY_RUN" == "true" ]] || ssh-keyscan -t ed25519,rsa "$host" >> ~/.ssh/known_hosts 2>/dev/null
+        ssh-keyscan -t ed25519,rsa "$host" >> ~/.ssh/known_hosts 2>/dev/null
         log_success "$host added"
     fi
 done
-
-# -----------------------------------------------------------------------------
-# Hostname (interactive — only if unset)
-# -----------------------------------------------------------------------------
-log_section "Hostname"
-current_name="$(scutil --get ComputerName 2>/dev/null || echo)"
-if [[ -n "$current_name" && "$current_name" != "Andreys-MacBook-Pro" && "$current_name" != *"MacBook"* ]]; then
-    # User likely already personalised it
-    log_success "ComputerName=$current_name (unchanged)"
-else
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "would prompt for new hostname"
-    elif [[ ! -t 0 ]]; then
-        log_warning "non-interactive — skip hostname setup"
-    else
-        read -rp "Set new hostname (empty to skip): " new_name
-        if [[ -n "$new_name" ]]; then
-            sudo scutil --set ComputerName  "$new_name"
-            sudo scutil --set HostName      "$new_name"
-            sudo scutil --set LocalHostName "$new_name"
-            log_success "hostname → $new_name"
-        else
-            log_info "skipped"
-        fi
-    fi
-fi
 
 echo
 log_success "post-install complete"
