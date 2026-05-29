@@ -297,7 +297,11 @@ install_rustup() {
         return 0
     fi
 
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1 | while read -r line; do
+    # --no-modify-path: do NOT let rustup write ~/.zshenv — that file is owned
+    # by stow (repo .zshenv already sources ~/.cargo/env). Without this flag,
+    # rustup's ~/.zshenv is a real file that conflicts with the main stow set
+    # and aborts the entire symlink run.
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path 2>&1 | while read -r line; do
         log_verbose "$line"
     done
 
