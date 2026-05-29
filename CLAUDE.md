@@ -38,6 +38,7 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 **`.private/` submodule (identity-bearing, machine-specific):**
 - `.config/git/config`, `.config/git/allowed_signers` - git identity + SSH signing trust
 - `.ssh/config`, `.ssh/*.pub` - SSH client config and public keys for this user
+- `.config/1Password/ssh/agent.toml` - 1Password SSH agent config (serves keys from the `ssh` vault; versioned so a fresh machine doesn't get 1Password's empty `vault = "Personal"` default)
 - `.zshrc.local`, `.zsh_history` - per-machine shell state
 - `.docker/daemon.json` - Docker daemon configuration
 - `.codex/config.toml`, `.gemini/settings.json` - AI assistant per-tool configs
