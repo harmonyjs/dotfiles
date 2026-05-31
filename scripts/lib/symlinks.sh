@@ -353,6 +353,7 @@ check_private_symlinks() {
         ! -name 'README.md' \
         ! -name '*.backup.*' \
         ! -path '*/scripts/*' \
+        ! -path '*/cloudflared/*' \
         -print0)
 
     echo "$passed/$total"
