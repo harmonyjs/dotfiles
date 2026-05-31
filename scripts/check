@@ -20,6 +20,7 @@ source "$SCRIPT_DIR/lib/symlinks.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
 source "$SCRIPT_DIR/lib/dock.sh"
 source "$SCRIPT_DIR/lib/git.sh"
+source "$SCRIPT_DIR/lib/remote-ssh.sh"
 
 # Help message
 show_help() {
@@ -427,6 +428,26 @@ if [[ "$total" -gt 0 ]]; then
         echo
     fi
 
+    ((total_passed += passed)) || true
+    ((total_checks += total)) || true
+    [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+fi
+
+# -----------------------------------------------------------------------------
+# Remote SSH (Cloudflare)
+# -----------------------------------------------------------------------------
+remote_ssh_result=$(check_remote_ssh)
+read -r passed total <<< "$(parse_result "$remote_ssh_result")"
+
+if [[ "$total" -gt 0 ]]; then
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_section "Remote SSH (Cloudflare)"
+    fi
+    if [[ "$VERBOSE" != "true" ]]; then
+        print_section_result "Remote SSH" "$remote_ssh_result"
+    else
+        echo
+    fi
     ((total_passed += passed)) || true
     ((total_checks += total)) || true
     [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
