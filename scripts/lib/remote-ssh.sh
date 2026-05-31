@@ -61,7 +61,7 @@ ensure_remote_ssh() {
 
     # Everything below needs root.
     if ! _rssh_can_sudo && [[ ! -t 0 ]]; then
-        log_warning "Remote SSH — system install needs sudo (none available unattended) — run: sudo ./scripts/post-install"
+        log_warning "Remote SSH — system install needs sudo (none available unattended) — re-run ./scripts/post-install in a terminal (sudo prompts inline; don't prefix sudo, root has no op session)"
         return 0
     fi
 
