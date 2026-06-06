@@ -68,4 +68,3 @@ fastrm() {
   # rm -rf & — удаление в фоне, терминал сразу свободен
   mv "$target" "$trash" && rm -rf "$trash" &
 }
-
