@@ -53,11 +53,13 @@ brew "neovim"            # Modern vim-based extensible text editor
 
 # Version control
 brew "gh"                # GitHub CLI for issues, PRs, and repository management
+brew "pre-commit"        # Framework for managing multi-language git pre-commit hooks
 
 # Security / Secrets
 brew "gnupg"                     # GnuPG for encryption (required for Doppler signature verification)
 tap "dopplerhq/cli"
 brew "doppler"                   # Doppler CLI for secrets management
+brew "gitleaks"                  # Detect and prevent hardcoded secrets in git repos
 # 1Password desktop: install manually from https://1password.com/downloads
 # Required for SSH agent + git commit signing; scripts/bootstrap waits for it
 cask "1password-cli"             # 1Password command-line tool for secrets and credentials
