@@ -66,6 +66,7 @@ cask "1password-cli"             # 1Password command-line tool for secrets and c
 brew "go"                # Go programming language compiler and tools
 brew "uv"                # Fast Python package manager with pip, venv, and pipx-like tool management
 brew "fnm"               # Fast Node.js version manager written in Rust
+brew "bun"               # Incredibly fast JavaScript runtime, bundler, test runner & package manager
 brew "cocoapods"         # CocoaPods: Swift/Objective-C dependency manager
 
 # Data manipulation
