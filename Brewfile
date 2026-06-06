@@ -85,6 +85,7 @@ brew "hashicorp/tap/terraform"   # Infrastructure as Code tool for cloud provisi
 brew "kubernetes-cli"    # kubectl: Kubernetes command-line client
 brew "k9s"               # Terminal UI for managing Kubernetes clusters
 brew "cloudflared"       # Cloudflare Tunnel daemon (expose localhost to internet)
+brew "heroku"            # Heroku CLI for managing and deploying apps on the Heroku PaaS
 brew "libpq"             # PostgreSQL client library (psql, pg_dump, pg_restore)
 brew "kcat"              # Apache Kafka CLI producer/consumer (formerly kafkacat)
 cask "clickhouse"        # ClickHouse: column-oriented analytical database
