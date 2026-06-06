@@ -1,0 +1,22 @@
+# Pre-commit hooks for this dotfiles repo.
+# Install once per clone:  pre-commit install   (or `just init` if wired in)
+# Run manually on demand:  pre-commit run --all-files
+# Bump pinned revs:        pre-commit autoupdate
+#
+# gitleaks is also available as a brew-managed CLI (see Brewfile) for ad-hoc
+# `gitleaks detect` scans; the pinned hook below is what guards every commit.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
