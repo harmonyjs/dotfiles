@@ -4,6 +4,7 @@
 \.idea
 docs
 scripts
+projects
 
 # Files
 \.gitignore

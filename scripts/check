@@ -17,6 +17,7 @@ source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/deps.sh"
 source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
+source "$SCRIPT_DIR/lib/memory.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
 source "$SCRIPT_DIR/lib/dock.sh"
 source "$SCRIPT_DIR/lib/git.sh"
@@ -334,6 +335,15 @@ read -r passed total <<< "$(parse_result "$symlinks_result")"
 ((total_passed += passed)) || true
 ((total_checks += total)) || true
 [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
+# Memory
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Memory"
+fi
+memory_result=$(check_memory)
+print_section_result "Memory" "$memory_result"
 
 # -----------------------------------------------------------------------------
 # Tmux Config

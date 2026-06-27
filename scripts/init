@@ -17,6 +17,7 @@ source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/deps.sh"
 source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
+source "$SCRIPT_DIR/lib/memory.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
 source "$SCRIPT_DIR/lib/dock.sh"
 source "$SCRIPT_DIR/lib/git.sh"
@@ -124,6 +125,11 @@ fi
 
 # Symlinks
 if ! ensure_all_symlinks; then
+    ((failed++))
+fi
+
+# Memory links (repo-backed dir symlinks; self-healing, captures drift)
+if ! link_memory; then
     ((failed++))
 fi
 
