@@ -78,6 +78,20 @@ ok "conflict: home copy stashed"   '[[ -n "$(find "$HOME/.claude/.memory-conflic
 ok "conflict: home memory linked"  '[[ -L "$HOME/.claude/projects/$id/memory" ]]'
 teardown
 
+# --- non-flat: a subdirectory blocks migration atomically (no partial move) ---
+setup
+id="-Users-a-GitHub-projsub"
+mkdir -p "$HOME/.claude/projects/$id/memory/.scratch/nested"
+printf 'KEEP'  > "$HOME/.claude/projects/$id/memory/m.md"
+printf 'AUDIT' > "$HOME/.claude/projects/$id/memory/.scratch/nested/log.json"
+link_memory_id "$id"; rc=$?
+ok "subdir: returns failure"        '[[ "$rc" -ne 0 ]]'
+ok "subdir: home left a real dir"   '[[ -d "$HOME/.claude/projects/$id/memory" && ! -L "$HOME/.claude/projects/$id/memory" ]]'
+ok "subdir: m.md NOT moved to repo" '[[ ! -e "$DOTFILES_DIR/.claude/projects/$id/memory/m.md" ]]'
+ok "subdir: m.md still in home"     '[[ "$(cat "$HOME/.claude/projects/$id/memory/m.md")" == "KEEP" ]]'
+ok "subdir: scratch intact"         '[[ "$(cat "$HOME/.claude/projects/$id/memory/.scratch/nested/log.json")" == "AUDIT" ]]'
+teardown
+
 # --- idempotency: second run changes nothing ---
 setup
 id="-Users-a-GitHub-proji"

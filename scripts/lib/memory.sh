@@ -36,6 +36,15 @@ link_memory_id() {
 
     # Real directory present (real-only / per-file links / mixed).
     if [[ -d "$home_mem" ]]; then
+        # Memory dirs are flat (atom files + MEMORY.md). A real subdirectory is
+        # non-memory runtime state (e.g. an audit/scratch dir) that the flat
+        # normalization below cannot handle: it would move the loose files yet
+        # fail to rmdir, leaving a half-migrated real dir. Refuse atomically —
+        # move the runtime dir out and re-run, rather than partially migrating.
+        if [[ -n "$(find "$home_mem" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)" ]]; then
+            log_warning "memory: $home_mem has a subdirectory (non-flat) — skipped; move runtime data out and re-run"
+            return 1
+        fi
         local f base has_real=false
         for f in "$home_mem"/*; do
             [[ -e "$f" || -L "$f" ]] || continue

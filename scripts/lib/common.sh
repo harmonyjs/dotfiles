@@ -26,9 +26,12 @@ NC='\033[0m' # No Color
 DRY_RUN=${DRY_RUN:-false}
 VERBOSE=${VERBOSE:-false}
 
-# Determine dotfiles directory (parent of scripts/)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
-DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"
+# Determine dotfiles directory (parent of scripts/).
+# Respect a pre-set DOTFILES_DIR so callers that source this outside a script
+# file (e.g. `bash -c 'source .../common.sh'`, where BASH_SOURCE[1] is empty and
+# the derivation would yield the wrong parent) can pass the correct path in.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")" && pwd)"
+DOTFILES_DIR="${DOTFILES_DIR:-$(dirname "$SCRIPT_DIR")}"
 
 # =============================================================================
 # Argument Parsing
