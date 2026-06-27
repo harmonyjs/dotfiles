@@ -89,6 +89,31 @@ ok "idempotent: link stable"  '[[ "$before" == "$after" ]]'
 ok "idempotent: a.md intact"  '[[ "$(cat "$HOME/.claude/projects/$id/memory/a.md")" == "ONE" ]]'
 teardown
 
+# --- link_memory: processes both repo-known and home-known projects ---
+setup
+mkdir -p "$DOTFILES_DIR/.claude/projects/-p-repoonly/memory"
+printf 'R' > "$DOTFILES_DIR/.claude/projects/-p-repoonly/memory/r.md"
+mkdir -p "$HOME/.claude/projects/-p-repoonly/memory"
+ln -s "$DOTFILES_DIR/.claude/projects/-p-repoonly/memory/r.md" "$HOME/.claude/projects/-p-repoonly/memory/r.md"
+mkdir -p "$HOME/.claude/projects/-p-homeonly/memory"
+printf 'H' > "$HOME/.claude/projects/-p-homeonly/memory/h.md"
+link_memory
+ok "all: repoonly linked"  '[[ -L "$HOME/.claude/projects/-p-repoonly/memory" ]]'
+ok "all: homeonly linked"  '[[ -L "$HOME/.claude/projects/-p-homeonly/memory" ]]'
+ok "all: homeonly captured" '[[ "$(cat "$DOTFILES_DIR/.claude/projects/-p-homeonly/memory/h.md")" == "H" ]]'
+teardown
+
+# --- check_memory: counts repo-backed vs drifted ---
+setup
+mkdir -p "$DOTFILES_DIR/.claude/projects/-p-good/memory"
+mkdir -p "$HOME/.claude/projects/-p-good"
+ln -s "$DOTFILES_DIR/.claude/projects/-p-good/memory" "$HOME/.claude/projects/-p-good/memory"
+mkdir -p "$HOME/.claude/projects/-p-drift/memory"
+printf 'D' > "$HOME/.claude/projects/-p-drift/memory/d.md"
+res="$(check_memory)"
+ok "status: 1 of 2 repo-backed" '[[ "$res" == "1/2" ]]'
+teardown
+
 echo "---"
 echo "passed=$pass failed=$fail"
 [[ "$fail" -eq 0 ]]

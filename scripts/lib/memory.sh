@@ -82,3 +82,57 @@ link_memory_id() {
 link_memory_project() {
     link_memory_id "$(memory_project_id "$1")"
 }
+
+# Link every known project's memory dir (union of repo-known and home-known ids).
+link_memory() {
+    local repo_root="$DOTFILES_DIR/.claude/projects"
+    local home_root="$HOME/.claude/projects"
+    local d id seen=" " failed=0
+
+    _process() {
+        local id="$1"
+        case "$seen" in *" $id "*) return 0;; esac
+        seen+="$id "
+        link_memory_id "$id" || failed=1
+    }
+
+    if [[ -d "$repo_root" ]]; then
+        for d in "$repo_root"/*/memory; do
+            [[ -d "$d" ]] || continue
+            _process "$(basename "$(dirname "$d")")"
+        done
+    fi
+    if [[ -d "$home_root" ]]; then
+        for d in "$home_root"/*/memory; do
+            [[ -e "$d" || -L "$d" ]] || continue
+            _process "$(basename "$(dirname "$d")")"
+        done
+    fi
+
+    if [[ "$failed" -eq 0 ]]; then
+        log_success "Memory links"
+    else
+        log_warning "Memory links — some projects need manual attention"
+    fi
+    return "$failed"
+}
+
+# Audit: "passed/total" where a project passes iff its home memory is a repo symlink.
+check_memory() {
+    local home_root="$HOME/.claude/projects"
+    local d id repo_mem total=0 passed=0
+    [[ -d "$home_root" ]] || { echo "0/0"; return 0; }
+    for d in "$home_root"/*/memory; do
+        [[ -e "$d" || -L "$d" ]] || continue
+        ((total++)) || true
+        id="$(basename "$(dirname "$d")")"
+        repo_mem="$DOTFILES_DIR/.claude/projects/$id/memory"
+        if [[ -L "$d" && "$(readlink "$d")" == "$repo_mem" ]]; then
+            ((passed++)) || true
+            [[ "$VERBOSE" == "true" ]] && log_success "memory: $id"
+        else
+            log_error "memory: $id — not repo-backed (drift)"
+        fi
+    done
+    echo "$passed/$total"
+}

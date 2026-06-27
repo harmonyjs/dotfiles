@@ -38,6 +38,14 @@ dry-run *ARGS:
 stow:
     stow --restow --no-folding -t ~ .
 
+# Link Claude Code memory dirs into the repo (idempotent)
+memory:
+    bash -c 'source scripts/lib/common.sh && source scripts/lib/memory.sh && link_memory'
+
+# Run memory linker unit tests
+test-memory:
+    bash scripts/tests/memory.test.sh
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
