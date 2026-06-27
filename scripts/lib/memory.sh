@@ -36,13 +36,14 @@ link_memory_id() {
 
     # Real directory present (real-only / per-file links / mixed).
     if [[ -d "$home_mem" ]]; then
-        # Memory dirs are flat (atom files + MEMORY.md). A real subdirectory is
-        # non-memory runtime state (e.g. an audit/scratch dir) that the flat
-        # normalization below cannot handle: it would move the loose files yet
-        # fail to rmdir, leaving a half-migrated real dir. Refuse atomically —
-        # move the runtime dir out and re-run, rather than partially migrating.
-        if [[ -n "$(find "$home_mem" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)" ]]; then
-            log_warning "memory: $home_mem has a subdirectory (non-flat) — skipped; move runtime data out and re-run"
+        # Memory dirs are flat (atom *.md + MEMORY.md). Any subdirectory OR hidden
+        # entry is non-memory state (an audit/scratch dir, a stray .DS_Store) that
+        # the flat normalization below cannot handle: the migration loop globs
+        # "$home_mem"/* (dotglob off, so it skips hidden entries), would move the
+        # loose files, then fail to rmdir the survivor — a half-migrated real dir.
+        # Refuse atomically; move the offending entry out and re-run.
+        if [[ -n "$(find "$home_mem" -mindepth 1 -maxdepth 1 \( -type d -o -name '.*' \) 2>/dev/null)" ]]; then
+            log_warning "memory: $home_mem has a subdirectory or hidden entry (non-flat) — skipped; move it out and re-run"
             return 1
         fi
         local f base has_real=false

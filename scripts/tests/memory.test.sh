@@ -92,6 +92,19 @@ ok "subdir: m.md still in home"     '[[ "$(cat "$HOME/.claude/projects/$id/memor
 ok "subdir: scratch intact"         '[[ "$(cat "$HOME/.claude/projects/$id/memory/.scratch/nested/log.json")" == "AUDIT" ]]'
 teardown
 
+# --- non-flat: a hidden file also blocks migration atomically (dotglob-safe) ---
+setup
+id="-Users-a-GitHub-projhidden"
+mkdir -p "$HOME/.claude/projects/$id/memory"
+printf 'KEEP' > "$HOME/.claude/projects/$id/memory/m.md"
+printf 'junk' > "$HOME/.claude/projects/$id/memory/.DS_Store"
+link_memory_id "$id"; rc=$?
+ok "hidden: returns failure"        '[[ "$rc" -ne 0 ]]'
+ok "hidden: home left a real dir"   '[[ -d "$HOME/.claude/projects/$id/memory" && ! -L "$HOME/.claude/projects/$id/memory" ]]'
+ok "hidden: m.md NOT moved to repo" '[[ ! -e "$DOTFILES_DIR/.claude/projects/$id/memory/m.md" ]]'
+ok "hidden: m.md still in home"     '[[ "$(cat "$HOME/.claude/projects/$id/memory/m.md")" == "KEEP" ]]'
+teardown
+
 # --- idempotency: second run changes nothing ---
 setup
 id="-Users-a-GitHub-proji"
