@@ -22,6 +22,11 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 - **`scripts/lib/git.sh`** — `ssh_ready` (1Password agent holds a key **and** GitHub authenticates it; side-effect-free probe) and `ensure_ssh_remote` (converges `origin` HTTPS → SSH, but only once `ssh_ready` passes; never downgrades). `init` runs `ensure_ssh_remote` every time, so the remote **self-heals** to SSH after you unlock 1Password; `check` reports a "Git remote" section; `bootstrap`'s manual 1Password gate is skipped whenever `ssh_ready` already passes.
 - **`.claude/`** is a git submodule with Claude Code configs
 - **`.private/`** is a git submodule with identity-bearing and machine-specific configs (see Repository Structure below for current scope)
+- **Memory is NOT managed by stow.** `projects` is in `.stow-local-ignore`. Claude Code auto-memory drifts the wrong way for stow — files are *born* in `~` (runtime writes), not in the repo — so `scripts/lib/memory.sh:link_memory()` owns it instead: each `~/.claude/projects/<id>/memory` is a single **directory symlink** into the `.claude` submodule, so runtime memory writes land directly in the repo working tree. `init` runs `link_memory` (self-healing), `check` audits it via `check_memory`, and a fail-safe **SessionStart hook** (`.claude/hooks/session-start-memory.sh`) makes a project repo-backed before its first memory write. `just memory` runs the linker; `just test-memory` runs its unit tests. Durability target is *capture in the working tree* — committing memory is manual / `oneiron`-owned, never automatic.
+- **Memory gotchas (baked into the linker, learned the hard way):**
+  - A memory dir must be **flat** (atom `*.md` + `MEMORY.md`). `link_memory_id` refuses any dir containing a real subdirectory — partially migrating around it would move the loose files yet fail to `rmdir`, leaving a half-linked drift. Move runtime/scratch subdirs out and re-run.
+  - The `oneiron` skill's audit/scratch tree lives as a **sibling** of the store — `~/.claude/projects/<id>/.oneiron/`, never inside `memory/` — precisely so it stays out of the versioned repo.
+  - Any caller that sources `scripts/lib/common.sh` outside a script file (e.g. `bash -c 'source …'`, the `memory` recipe, the hook) **must pass `DOTFILES_DIR` explicitly** — `BASH_SOURCE[1]` is empty there and the auto-derivation yields the wrong parent (`~/GitHub` instead of `~/GitHub/dotfiles`), silently linking memory into a stray tree. `common.sh` now honors a pre-set `DOTFILES_DIR`.
 
 ## Repository Structure
 
@@ -103,3 +108,4 @@ ZSH files have strict separation of concerns. Follow these rules when modifying 
 - Always use stow for symlink management
 - Create backups before config modifications
 - NEVER create symlinks manually, stow has to manage them
+- **Stow exception (memory only):** `scripts/lib/memory.sh` is a second, deliberate symlink manager beside stow — declarative and idempotent, not ad-hoc. Stow stays the source of truth for static config; `link_memory` owns the `projects/*/memory` directory symlinks. This is the one sanctioned place symlinks are not created by stow.

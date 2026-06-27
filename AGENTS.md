@@ -84,6 +84,7 @@ When the user is setting up a brand-new Mac (or after a clean install) and asks 
 - **Symlink Paths**: Ensure symlinks use relative paths, never absolute paths
 - **Machine-Specific Files**: Preserve `*.local` pattern files (.zshrc.local, *.local.json) - never modify or version control them
 - **Stow Ignore Respect**: Never modify `.stow-local-ignore` without understanding symlink implications
+- **Memory is not stow's**: Claude Code auto-memory (`.claude/projects/*/memory`) is excluded from stow (it's in `.stow-local-ignore`) and managed by `scripts/lib/memory.sh:link_memory` instead — directory symlinks into the `.claude` submodule, run via `just memory`, audited by `just check`. Do not try to stow it or hand-link it. See dotfiles `CLAUDE.md` → Key Concepts for the full model and gotchas.
 - **Private Submodule Priority**: When modifying stow configuration, maintain priority order: public first, then private (`.private/` is stowed separately)
 - **Optional Submodules**: `.private/` submodule is optional - scripts must handle its absence gracefully
 - **Brew cask policy**: Homebrew is for CLIs, fonts, headless system utilities (raycast, alacritty, bluesnooze, 1password-cli, clickhouse). Desktop GUI apps — editors/IDEs (Claude, VS Code, JetBrains, Android Studio), messengers (Discord, Telegram), productivity (Notion, Figma), browsers, 1Password **desktop**, office suites — are installed from official `.dmg`. Do not propose `cask "<gui-app>"` additions to `Brewfile` for those categories.
