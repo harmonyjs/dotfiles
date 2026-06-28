@@ -13,7 +13,9 @@ projects
 README\.md
 LICENSE
 AGENTS\.md
-CLAUDE\.md
+# leading-slash anchors to package root: ignore repo-root CLAUDE.md only,
+# so nested .claude/CLAUDE.md (the global Finch instructions) DOES get stowed into ~/.claude/
+^/CLAUDE\.md$
 Brewfile
 Justfile
 
