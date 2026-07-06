@@ -19,6 +19,11 @@ AGENTS\.md
 Brewfile
 Justfile
 
+# macOS Finder junk — regenerates in any directory. A present .stow-local-ignore
+# REPLACES Stow's built-in default ignore list, so .DS_Store must be listed
+# explicitly or stow tries to symlink every one it finds and aborts on conflict.
+\.DS_Store
+
 # Local configuration files
 .*\.local\.json
 \.zshrc\.local
