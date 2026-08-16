@@ -50,6 +50,10 @@ test-memory:
 test-commit-guide:
     bash .claude/hooks/commit-pr-guide.test.sh
 
+# Run stop-ask-user hook tests
+test-stop-ask:
+    bash .claude/hooks/stop-ask-user.test.sh
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
