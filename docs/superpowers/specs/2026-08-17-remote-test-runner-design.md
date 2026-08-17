@@ -1,7 +1,9 @@
 # `remote` — ad-hoc test execution on a remote box — design
 
 **Date:** 2026-08-17
-**Status:** design approved in brainstorming; pending review gate
+**Status:** design approved in brainstorming; mechanical findings from
+adversarial review applied; three architectural questions still open (see Open
+questions)
 **Repo:** `bin/remote` + sweeper + this spec live in `dotfiles`; `compose.test.yaml` lands in each participating service repo.
 
 ## Goal
@@ -126,6 +128,7 @@ services:
   runner:
     image: golang:1.26.3
     working_dir: /src
+    profiles: [runner]        # never started by `compose up`; see below
     volumes:
       - ${REMOTE_SRC:-.}:/src
       - ar-gocache:/root/.cache/go-build
@@ -155,21 +158,56 @@ quietly defeat the point. Declaring them external pins them to fixed names
 outside any project, which is what makes them shared. The client creates them on
 first use.
 
-`REMOTE_SRC` is the detail that makes one file serve both worlds. Compose reads
-the file on the client but resolves bind paths against the **remote** daemon, so
-the client exports `REMOTE_SRC=~/remote-runs/<run-id>/src`; unset, it falls back
-to `.` and the file works unchanged for a local run.
+`runner` sits behind a `runner` profile so that `compose up` starts sidecars
+only. Without the profile, `up` starts every declared service - including a
+`runner` that nothing is waiting on - and then `compose run` creates a second
+one. Two containers of the same service, one of them idle, is enough to make any
+"has the runner exited" check on the sweeper side answer the wrong question.
+
+`REMOTE_SRC` is the detail that makes one file serve both worlds, and it must be
+an **absolute path on the server, expanded before compose ever sees it**.
+Compose reads the file on the client but resolves bind paths against the remote
+daemon, and a `~` in the value is expanded by the client shell against the
+client's `$HOME` - which on a Mac client yields `/Users/<user>/remote-runs/...`,
+a path that does not exist on a Linux daemon. So the client resolves the server
+home once (`ssh <host> 'echo $HOME'`, cached in the run metadata) and exports a
+fully-expanded `REMOTE_SRC=/home/<user>/remote-runs/<run-id>/src`. Unset, it
+falls back to `.` and the file works unchanged for a local run.
 
 Note the connection string points at `postgres:5432` - the service name on the
 project network - not at a published host port. That is the whole isolation
 argument in one line.
 
+### Canonical compose invocation
+
+Every compose call - client and sweeper alike - passes the file and the project
+explicitly:
+
+```
+docker compose -f <server-run-dir>/src/compose.test.yaml -p <run-id> <cmd>
+```
+
+Compose's default file discovery looks for `compose.yaml` or
+`docker-compose.yaml` in the working directory, so a contract named
+`compose.test.yaml` is invisible without `-f`. The sweeper runs from cron with
+no meaningful working directory at all, which makes this less a style preference
+than the difference between a teardown that works and one that silently finds no
+project. The absolute path is written into the run metadata at submit time and
+read back from there by everything downstream.
+
 ### Component 3 - the sweeper
 
-A cron job on the server. It lists compose projects with the `rr-` prefix and
-tears down any whose runner container has exited, or whose start label is older
-than its TTL: `compose -p <project> down -v`, then remove
-`~/remote-runs/<run-id>`.
+A cron job on the server. For each run directory it reads the run metadata -
+compose file path, job container id, start time, TTL - and tears the project
+down when the recorded **job container** has reached a terminal state, or when
+the TTL has expired: `compose -f <recorded path> -p <project> down -v`, then
+remove the run directory.
+
+It keys on the recorded container id rather than on "a container of service
+`runner`". Service identity is ambiguous by construction here, because
+`compose run` creates one-off containers of the same service; the id captured at
+submit time is the only unambiguous handle on the job this run is actually
+about.
 
 This is the same shape as the local `reap-orphan-shells.sh` hook, for the same
 reason: teardown must not depend on a client being alive to perform it.
@@ -181,17 +219,23 @@ reason: teardown must not depend on a client being alive to perform it.
    the same branch reuses its directory and its warm caches.
 2. **Take a slot.** `flock` against one of N slot files on the server. Over the
    limit, wait and say so; never hang silently.
-3. **Sync.** rsync the tree to `~/remote-runs/<run-id>/src`, filtered by
+3. **Sync.** rsync the tree to `<server home>/remote-runs/<run-id>/src` -
+   the server's home, resolved server-side, never the client's - filtered by
    `.gitignore`, without `.git`. First run copies everything, later runs only the
    delta.
-4. **Bring up sidecars.** `compose -p <run-id> up -d`, with `healthcheck`
-   gating readiness.
-5. **Start the runner detached** and capture its container id:
-   `compose -p <run-id> run --detach runner timeout <N> sh -c '<command>'`.
+4. **Bring up sidecars.** `compose up -d` with the canonical invocation. The
+   `runner` profile keeps the runner out of it, so this starts sidecars only,
+   with `healthcheck` gating readiness.
+5. **Start the job detached** and record its container id in the run metadata:
+   `compose run --detach runner timeout --kill-after=30s <N> sh -c '<command>'`.
 6. **Stream.** `docker logs -f <cid>` in the foreground. This is what
    `--attach` re-runs later.
-7. **Collect and tear down** on clean exit: pull artifacts back, then
-   `compose -p <run-id> down -v`.
+7. **Get the terminal status** from `docker wait <cid>`, not from the log
+   follower - `logs -f` returns when the stream closes and tells you nothing
+   about how the process ended.
+8. **Collect and tear down** on clean exit: pull artifacts back, then
+   `compose down -v` with the canonical invocation, and remove the run
+   directory.
 
 ### Why the timeout lives inside the container
 
@@ -210,13 +254,35 @@ deadline**, and the deadline is unconditional.
 Detached start plus `logs -f` is what makes that survival real: an attached
 `compose run` would tie the container's lifetime to the client's terminal.
 
-### Artifact return never overwrites source
+`--kill-after=30s` is what makes "unconditional" true rather than aspirational.
+Bare `timeout` sends TERM and then waits forever; a process that ignores TERM -
+a Go test binary mid-syscall, a shell that traps it - outlives the deadline it
+was supposed to be bounded by. The escalation to KILL is the whole guarantee.
 
-Only an allowlist comes back - never the tree. A blanket reverse sync would
-clobber edits made locally while the run was in flight. The default list is
-`**/testdata/rapid/**`, `coverage.out` and `artifacts/`; `--pull <path>` adds to
-it for a single run, and `pull` in `~/.config/remote/config` overrides the
-default globally.
+The escalation is worth stating as an invariant to test rather than a flag to
+remember: a command that ignores TERM must still be gone within
+`timeout + kill-after`.
+
+### Artifact return never touches the working tree
+
+Results land in a run-scoped directory outside the worktree -
+`~/.local/state/remote/<run-id>/` - and the client prints the path. Nothing is
+ever written back into the source tree.
+
+An allowlist alone was not enough to make the earlier "never overwrites source"
+claim true: the defaults are source-relative paths like `coverage.out` and
+`artifacts/`, so a locally-edited `artifacts/foo` would have been overwritten by
+the return of a run that started before the edit. Writing outside the tree is
+what actually delivers the invariant; the allowlist only decides what is worth
+carrying back. Copying anything into the tree stays a separate, explicit act by
+whoever wants it there.
+
+The allowlist defaults to `**/testdata/rapid/**`, `coverage.out` and
+`artifacts/`, interpreted **relative to the run's source root on the server**.
+Absolute paths, `..` traversal and symlinks pointing outside that root are
+rejected rather than followed - a rule that matters precisely because the
+patterns can be extended per run with `--pull <path>`, and `pull` in
+`~/.config/remote/config` replaces the defaults globally.
 
 When a run fails, the rapid failfile carrying the reproducing seed is the single
 most valuable thing it produced, so **artifacts are collected on failure too**,
@@ -227,7 +293,7 @@ not only on success.
 - Compose project name per run isolates network, volumes and containers.
 - No host ports published, ever. Sidecars are reachable only inside the project
   network.
-- One directory per run under `~/remote-runs/`.
+- One directory per run under `<server home>/remote-runs/`.
 - **Caches are shared, not per run** - build caches per repo
   (`<repo>-gocache`, `<repo>-npmcache`), the Go module cache global
   (`go-modcache`), all as external volumes as described above. Per-run caches
@@ -244,8 +310,13 @@ not only on success.
 | Timeout fired | Distinct exit code, explicit "killed after N" line, not a bare SIGKILL |
 | Command failed | Artifacts still collected, project still torn down |
 
-`timeout(1)` exits 124 on expiry; the client maps that to its own message rather
-than passing a confusing status upward.
+The status comes from `docker wait` on the recorded container id. `timeout(1)`
+exits 124 on expiry and 137 when it had to escalate to KILL; the client maps
+both to its own message rather than passing a confusing number upward, and keeps
+them distinguishable from an ordinary non-zero test failure. A test suite that
+legitimately exits 124 is not a case worth designing around, but the run
+metadata records that the deadline fired, so the two are told apart by recorded
+fact rather than by guessing from the code.
 
 ## Repo migration
 
@@ -269,9 +340,53 @@ per repo rather than guess.
   argument parsing, run-id derivation, rsync filter construction.
 - **Integration:** point the client at a local docker daemon acting as the
   server and drive an end-to-end run against a fixture repo.
-- **Negative cases,** each pinning an invariant rather than a happy path: ssh
-  dropped mid-run leaves the container alive; an expired timeout kills it; the
-  sweeper reclaims a project whose client never came back.
+- **Negative cases,** each pinning an invariant rather than a happy path:
+  - ssh dropped mid-run leaves the container alive, and `--attach` finds it
+    again along with its artifacts;
+  - a command that traps and ignores TERM is still gone within
+    `timeout + kill-after`;
+  - the sweeper reclaims a project whose client never came back, and does not
+    reclaim one whose job is still running;
+  - a locally-modified file at an allowlisted artifact path is untouched after a
+    run returns;
+  - `docker compose config` against the remote context resolves the bind source
+    to a path that exists on the server. This one is worth a test rather than a
+    read-through: the failure mode is a `~` silently expanding on the wrong
+    machine, which reads as correct in the file and only shows up at mount time.
+
+## Open questions
+
+An adversarial review raised three things that are decisions rather than
+defects. They are recorded here unresolved rather than papered over, because
+each one trades away something the design deliberately chose.
+
+**Run id is deterministic, and two runs from one worktree collide.** The id is
+`<repo>-<branch>-<hash of worktree path>` precisely so a repeat run reuses its
+directory and its warm caches. The cost is that two concurrent runs from the
+same branch share a source directory, share sidecars and a database, and the
+first one to finish tears down the other with `down -v`. A unique id per
+execution removes the collision and gives up cheap incremental rsync and warm
+per-run state; a worktree mutex keeps both but makes the second run wait. Which
+is right depends on whether concurrent runs from one branch are a real workflow
+or an accident worth refusing outright.
+
+**Slots and retention live in client config, with no server-resident owner.**
+A `flock` held by the submitting client is released when that client dies, while
+its detached run keeps going - so the next submit can exceed the limit. And the
+sweeper tearing down promptly on exit means a disconnected client loses the logs
+and artifacts it never got to pull. Fixing both properly means server-owned run
+state: a lease held until verified terminal cleanup, and a retention window
+before reclamation. That is a step back toward the job daemon that was
+deliberately rejected, so it is a scope decision, not a bug fix.
+
+**The compose file arrives from an uncommitted tree and is executed by a daemon
+running as an account in the `docker` group.** Keeping the socket out of the
+runner does not constrain what the compose file itself may ask for -
+`privileged`, host networking, a bind mount of the host root. Either the box is
+treated as disposable and fully trusted to whatever the local agents produce, or
+the server accepts only reviewed profiles rather than client-supplied compose.
+This needs an explicit answer before the tool runs anything on a machine that
+matters.
 
 ## Out of scope
 
