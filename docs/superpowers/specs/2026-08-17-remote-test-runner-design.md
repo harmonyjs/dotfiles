@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-17
 **Status:** design approved in brainstorming; adversarial-review findings
-applied, including a server-side run registry; one question still open (see Open
-question)
+applied, including a server-side run registry and an explicit trust model; ready
+for implementation planning
 **Repo:** `bin/remote` + sweeper + this spec live in `dotfiles`; `compose.test.yaml` lands in each participating service repo.
 
 ## Goal
@@ -435,25 +435,32 @@ per repo rather than guess.
     read-through: the failure mode is a `~` silently expanding on the wrong
     machine, which reads as correct in the file and only shows up at mount time.
 
-## Open question
+## Trust model
 
-One thing from the adversarial review is a decision nobody has made yet, and it
-is recorded unresolved rather than papered over.
+The box is disposable and fully trusted to whatever the local tooling produces.
+Client-supplied compose is executed as-is: no validator, no allowlist of compose
+keys, no rejection of `privileged` or host networking.
 
-**The compose file arrives from an uncommitted tree and is executed by a daemon
-running as an account in the `docker` group.** Keeping the socket out of the
-runner does not constrain what the compose file itself may ask for -
-`privileged`, host networking, a bind mount of the host root. The isolation
-argument elsewhere in this document is about runs not colliding with each other;
-it says nothing about a run reaching the host, and it should not be read as if
-it did.
+This is a decision, not an oversight, and it is written down because the
+reasoning behind it is exactly the kind that stops being true quietly. The
+isolation argument elsewhere in this document is about runs not colliding with
+each other. It says nothing about a run reaching the host, and must not be read
+as if it did: the compose file arrives from an uncommitted tree that Claude
+sessions also write to, and it is handed to a daemon running as an account in
+the `docker` group. A run can therefore do anything to this machine.
 
-Either the box is treated as disposable and fully trusted to whatever the local
-agents produce, or the server accepts only reviewed profiles rather than
-client-supplied compose. The first is a legitimate answer for a throwaway test
-box and costs nothing to implement; it just has to be chosen out loud, because
-the difference only becomes visible on the day the box is not throwaway
-anymore.
+That is acceptable only while all of the following hold:
+
+- the box exists for test runs and nothing else;
+- it holds no credentials worth stealing and has no standing access to
+  production;
+- losing it entirely means reprovisioning, not an incident.
+
+Any one of those changing is the signal to revisit - most likely toward
+server-side reviewed profiles, where the server supplies the compose and the
+client supplies only the command. Adding that later is straightforward. Noticing
+that it became necessary is the hard part, which is why the conditions are
+listed here rather than left as a shared assumption.
 
 ## Out of scope
 
