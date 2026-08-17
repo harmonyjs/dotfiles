@@ -1,9 +1,9 @@
 # `remote` — ad-hoc test execution on a remote box — design
 
 **Date:** 2026-08-17
-**Status:** design approved in brainstorming; mechanical findings from
-adversarial review applied; three architectural questions still open (see Open
-questions)
+**Status:** design approved in brainstorming; adversarial-review findings
+applied, including a server-side run registry; one question still open (see Open
+question)
 **Repo:** `bin/remote` + sweeper + this spec live in `dotfiles`; `compose.test.yaml` lands in each participating service repo.
 
 ## Goal
@@ -91,7 +91,8 @@ of truth rather than a local path and a remote path that drift.
 |---|---|---|
 | `bin/remote` | `dotfiles` | the client - everything below happens here |
 | `compose.test.yaml` | each participating repo | the only description of the run environment |
-| `remote-sweeper` | cron on the server | teardown that does not depend on a live client |
+| `remote-runs/` | the server | the registry: one directory per run, holding its metadata, log, status and artifacts |
+| `remote-sweeper` | cron on the server | teardown, slot release and reclamation, none of it depending on a live client |
 | `~/.config/remote/config` | local | server address, concurrency limit, default timeout |
 
 The server runs nothing bespoke. Docker, rsync and cron. Anything that goes
@@ -112,8 +113,8 @@ remote --kill <run-id>
 ```
 
 `~/.config/remote/config` holds `host` (required, no default - the tool refuses
-to guess where to send work), `slots = 4`, `timeout = 30m`, `ttl = 2h` for the
-sweeper, and the `pull` allowlist. `slots` and `timeout` are the two that keep
+to guess where to send work), `slots = 4`, `timeout = 30m`, `ttl = 2h` and
+`retention = 24h` for the sweeper, and the `pull` allowlist. `slots` and `timeout` are the two that keep
 one box from being flooded the way the Mac was; both are deliberately small
 enough to notice rather than generous enough to hide a runaway.
 
@@ -131,6 +132,7 @@ services:
     profiles: [runner]        # never started by `compose up`; see below
     volumes:
       - ${REMOTE_SRC:-.}:/src
+      - ${REMOTE_RUN:-./.remote-run}:/run
       - ar-gocache:/root/.cache/go-build
       - go-modcache:/go/pkg/mod
     environment:
@@ -164,6 +166,10 @@ only. Without the profile, `up` starts every declared service - including a
 one. Two containers of the same service, one of them idle, is enough to make any
 "has the runner exited" check on the sweeper side answer the wrong question.
 
+`REMOTE_RUN` is the run directory - where the wrapper writes `log` and `status`,
+and where artifacts are collected from. It is mounted rather than derived so the
+job never has to know its own run id.
+
 `REMOTE_SRC` is the detail that makes one file serve both worlds, and it must be
 an **absolute path on the server, expanded before compose ever sees it**.
 Compose reads the file on the client but resolves bind paths against the remote
@@ -172,7 +178,8 @@ client's `$HOME` - which on a Mac client yields `/Users/<user>/remote-runs/...`,
 a path that does not exist on a Linux daemon. So the client resolves the server
 home once (`ssh <host> 'echo $HOME'`, cached in the run metadata) and exports a
 fully-expanded `REMOTE_SRC=/home/<user>/remote-runs/<run-id>/src`. Unset, it
-falls back to `.` and the file works unchanged for a local run.
+falls back to `.` and the file works unchanged for a local run. `REMOTE_RUN`
+follows the same rule and the same expansion.
 
 Note the connection string points at `postgres:5432` - the service name on the
 project network - not at a published host port. That is the whole isolation
@@ -195,47 +202,104 @@ than the difference between a teardown that works and one that silently finds no
 project. The absolute path is written into the run metadata at submit time and
 read back from there by everything downstream.
 
-### Component 3 - the sweeper
+### Component 3 - the run registry
 
-A cron job on the server. For each run directory it reads the run metadata -
-compose file path, job container id, start time, TTL - and tears the project
-down when the recorded **job container** has reached a terminal state, or when
-the TTL has expired: `compose -f <recorded path> -p <project> down -v`, then
-remove the run directory.
+The server keeps no daemon and no database. The registry is the run directory
+itself, under `<server home>/remote-runs/`:
 
-It keys on the recorded container id rather than on "a container of service
-`runner`". Service identity is ambiguous by construction here, because
+```
+remote-runs/
+  .slots/<n>              lease file: run-id of the holder, or absent
+  <run-id>/
+    run.json              repo, branch, worktree key, compose path, project,
+                          job container id, slot, submitted-at, timeout, state
+    src/                  the synced tree, bind-mounted into the runner
+    log                   the job's stdout+stderr, written by the job itself
+    status                the job's exit code, written by the job itself
+    artifacts/            what the pull allowlist collected
+```
+
+Two things are deliberately files rather than docker state. `log` is bind-mounted
+into the runner and redirected into by the wrapper, so it survives `down -v` and
+can be tailed after the containers are gone - which is the whole point of being
+able to reattach to a run whose client died. `status` is written by the wrapper
+for the same reason; `docker inspect` is the fallback when the wrapper never got
+to write it, which is exactly the case where the container was killed from
+outside.
+
+### Component 4 - the sweeper
+
+A cron job on the server, and the only thing that releases anything. For each
+run it reads `run.json` and moves the run through two stages rather than one:
+
+- **Terminal:** the recorded job container has stopped, or the TTL has expired.
+  Tear down the compose project (`compose -f <recorded path> -p <project> down
+  -v`), record the exit status, and **release the slot**. The run directory
+  stays.
+- **Expired:** the run has been terminal for longer than the retention window.
+  Remove the run directory.
+
+Splitting those two is what lets a disconnected client come back for its logs
+and its failure artifacts. Tearing down the project on exit but keeping the
+directory costs a few megabytes and buys the one thing a flake hunt actually
+needs: the failing seed, still there tomorrow morning.
+
+The sweeper keys on the recorded container id rather than on "a container of
+service `runner`". Service identity is ambiguous by construction here, because
 `compose run` creates one-off containers of the same service; the id captured at
-submit time is the only unambiguous handle on the job this run is actually
-about.
+submit time is the only unambiguous handle on the job this run is about.
+
+**The slot lease belongs to the sweeper, not to the client.** A `flock` held by
+the submitting process is released the moment that process dies - while its
+detached run keeps burning cores, and the next submit sees a free slot that is
+not free. So a slot is claimed by atomically creating `.slots/<n>` (`set -C`,
+which is `O_EXCL` and therefore atomic even over ssh) and released only when the
+sweeper has verified the run is terminal. The limit then means what it says
+regardless of what happened to any client.
 
 This is the same shape as the local `reap-orphan-shells.sh` hook, for the same
-reason: teardown must not depend on a client being alive to perform it.
+reason: reclamation must not depend on a client being alive to perform it.
 
 ## Run lifecycle
 
-1. **Derive the run id:** `rr-<repo>-<branch>-<short hash of worktree path>`,
-   which is also the compose project name. Deterministic, so a repeated run from
-   the same branch reuses its directory and its warm caches.
-2. **Take a slot.** `flock` against one of N slot files on the server. Over the
-   limit, wait and say so; never hang silently.
-3. **Sync.** rsync the tree to `<server home>/remote-runs/<run-id>/src` -
-   the server's home, resolved server-side, never the client's - filtered by
-   `.gitignore`, without `.git`. First run copies everything, later runs only the
-   delta.
+1. **Mint a run id,** unique per execution: `rr-<repo>-<branch>-<counter>`,
+   which is also the compose project name. The worktree it came from is recorded
+   separately in `run.json` as the worktree key - identity of the *tree* and
+   identity of the *execution* are two different things, and conflating them is
+   what let one run tear down another.
+2. **Claim a slot** by atomically creating a free `.slots/<n>`. Over the limit,
+   wait and say so; never hang silently.
+3. **Sync** into the new run's `src/`, with the previous run from the same
+   worktree as `--link-dest`:
+
+   ```
+   rsync --link-dest=<previous run>/src <local tree>/ <server>:<run>/src/
+   ```
+
+   Unchanged files become hardlinks to the previous run instead of bytes on the
+   wire or blocks on disk, so a fresh directory per run costs about what a delta
+   sync cost before. The previous run dir comes from the registry, keyed by
+   worktree. Filtered by `.gitignore`, without `.git`.
 4. **Bring up sidecars.** `compose up -d` with the canonical invocation. The
    `runner` profile keeps the runner out of it, so this starts sidecars only,
    with `healthcheck` gating readiness.
-5. **Start the job detached** and record its container id in the run metadata:
-   `compose run --detach runner timeout --kill-after=30s <N> sh -c '<command>'`.
-6. **Stream.** `docker logs -f <cid>` in the foreground. This is what
-   `--attach` re-runs later.
-7. **Get the terminal status** from `docker wait <cid>`, not from the log
-   follower - `logs -f` returns when the stream closes and tells you nothing
-   about how the process ended.
-8. **Collect and tear down** on clean exit: pull artifacts back, then
-   `compose down -v` with the canonical invocation, and remove the run
-   directory.
+5. **Start the job detached** and record its container id in `run.json`:
+
+   ```
+   compose run --detach runner \
+     sh -c 'timeout --kill-after=30s <N> <command> > /run/log 2>&1; echo $? > /run/status'
+   ```
+
+   with the run directory bind-mounted at `/run`.
+6. **Stream** by tailing `<run>/log` over ssh. Not `docker logs -f`: a file
+   outlives the container, so `--attach` works on a run that has already been
+   torn down, and the same command serves both the live and the after-the-fact
+   case.
+7. **Read the terminal status** from `<run>/status`, falling back to `docker
+   inspect` when it is missing - which means the container died without the
+   wrapper finishing, and is itself the interesting signal.
+8. **Collect.** Pull artifacts back. Teardown and reclamation are the sweeper's
+   job, not the client's, so a client that dies here changes nothing.
 
 ### Why the timeout lives inside the container
 
@@ -251,8 +315,8 @@ itself through the fan. On a remote box nobody would have heard it. The rule
 Andrey chose is that a run **survives a disconnect but always carries a hard
 deadline**, and the deadline is unconditional.
 
-Detached start plus `logs -f` is what makes that survival real: an attached
-`compose run` would tie the container's lifetime to the client's terminal.
+Detached start is what makes that survival real: an attached `compose run`
+would tie the container's lifetime to the client's terminal.
 
 `--kill-after=30s` is what makes "unconditional" true rather than aspirational.
 Bare `timeout` sends TERM and then waits forever; a process that ignores TERM -
@@ -293,7 +357,16 @@ not only on success.
 - Compose project name per run isolates network, volumes and containers.
 - No host ports published, ever. Sidecars are reachable only inside the project
   network.
-- One directory per run under `<server home>/remote-runs/`.
+- One directory per run, and a run id minted per execution rather than derived
+  from the branch, so two runs from one worktree cannot share a project, a
+  source tree or a database.
+- Successive runs from the same worktree are chained with `rsync --link-dest`,
+  so isolation does not cost a full copy. The one case this does not isolate is
+  a command that rewrites its own source files in place: hardlinks are shared
+  storage, so such a write would reach through into the previous run's
+  directory. Go builds write to the cache volume rather than the tree, but a
+  generator or a golden-file update would not, which is why overlapping runs
+  from one worktree are on the test list rather than assumed safe.
 - **Caches are shared, not per run** - build caches per repo
   (`<repo>-gocache`, `<repo>-npmcache`), the Go module cache global
   (`go-modcache`), all as external volumes as described above. Per-run caches
@@ -309,6 +382,8 @@ not only on success.
 | Concurrency limit reached | Show `--ls` output and wait; never hang mutely |
 | Timeout fired | Distinct exit code, explicit "killed after N" line, not a bare SIGKILL |
 | Command failed | Artifacts still collected, project still torn down |
+| Client died mid-run | Run continues to its deadline; slot stays held; logs and artifacts wait out the retention window |
+| Run id not found | Say whether it never existed or was reclaimed after retention - the two mean different things to whoever is asking |
 
 The status comes from `docker wait` on the recorded container id. `timeout(1)`
 exits 124 on expiry and 137 when it had to escalate to KILL; the client maps
@@ -347,6 +422,12 @@ per repo rather than guess.
     `timeout + kill-after`;
   - the sweeper reclaims a project whose client never came back, and does not
     reclaim one whose job is still running;
+  - a slot taken by a client that then dies is still held while its run
+    continues, and is released only once the sweeper sees the run terminate;
+  - two runs launched from the same worktree do not share a project, a source
+    tree or a database, and neither tears the other down;
+  - logs and artifacts of a finished run are still readable through `--attach`
+    after the project is torn down, until retention expires;
   - a locally-modified file at an allowlisted artifact path is untouched after a
     run returns;
   - `docker compose config` against the remote context resolves the bind source
@@ -354,44 +435,31 @@ per repo rather than guess.
     read-through: the failure mode is a `~` silently expanding on the wrong
     machine, which reads as correct in the file and only shows up at mount time.
 
-## Open questions
+## Open question
 
-An adversarial review raised three things that are decisions rather than
-defects. They are recorded here unresolved rather than papered over, because
-each one trades away something the design deliberately chose.
-
-**Run id is deterministic, and two runs from one worktree collide.** The id is
-`<repo>-<branch>-<hash of worktree path>` precisely so a repeat run reuses its
-directory and its warm caches. The cost is that two concurrent runs from the
-same branch share a source directory, share sidecars and a database, and the
-first one to finish tears down the other with `down -v`. A unique id per
-execution removes the collision and gives up cheap incremental rsync and warm
-per-run state; a worktree mutex keeps both but makes the second run wait. Which
-is right depends on whether concurrent runs from one branch are a real workflow
-or an accident worth refusing outright.
-
-**Slots and retention live in client config, with no server-resident owner.**
-A `flock` held by the submitting client is released when that client dies, while
-its detached run keeps going - so the next submit can exceed the limit. And the
-sweeper tearing down promptly on exit means a disconnected client loses the logs
-and artifacts it never got to pull. Fixing both properly means server-owned run
-state: a lease held until verified terminal cleanup, and a retention window
-before reclamation. That is a step back toward the job daemon that was
-deliberately rejected, so it is a scope decision, not a bug fix.
+One thing from the adversarial review is a decision nobody has made yet, and it
+is recorded unresolved rather than papered over.
 
 **The compose file arrives from an uncommitted tree and is executed by a daemon
 running as an account in the `docker` group.** Keeping the socket out of the
 runner does not constrain what the compose file itself may ask for -
-`privileged`, host networking, a bind mount of the host root. Either the box is
-treated as disposable and fully trusted to whatever the local agents produce, or
-the server accepts only reviewed profiles rather than client-supplied compose.
-This needs an explicit answer before the tool runs anything on a machine that
-matters.
+`privileged`, host networking, a bind mount of the host root. The isolation
+argument elsewhere in this document is about runs not colliding with each other;
+it says nothing about a run reaching the host, and it should not be read as if
+it did.
+
+Either the box is treated as disposable and fully trusted to whatever the local
+agents produce, or the server accepts only reviewed profiles rather than
+client-supplied compose. The first is a legitimate answer for a throwaway test
+box and costs nothing to implement; it just has to be chosen out loud, because
+the difference only becomes visible on the day the box is not throwaway
+anymore.
 
 ## Out of scope
 
-A server pool, a scheduler, a web UI, per-run CPU and memory quotas. One box,
-one user plus their agents, a slot limit and a deadline.
+A server pool, a scheduler, a web UI, per-run CPU and memory quotas, a daemon
+of any kind. One box, one user plus their agents, a slot limit, a deadline, and
+a directory per run that doubles as the registry.
 
 ## Requires from the server
 
