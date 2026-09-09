@@ -6,6 +6,7 @@ You are maintaining a dotfiles repository that uses GNU Stow for symlink managem
 - Configuration files are stored in repository root and symlinked to home directory via `stow -v -t ~ --no-folding .`
 - Required stow flags: `-t ~` (target home directory), `--no-folding` (preserve runtime directories), `-v` (verbose)
 - `.stow-local-ignore` controls which files should NOT be symlinked
+- Global Claude Code / Codex instructions have one source in `.claude/CLAUDE.md` (the existing submodule). `.agents/INSTRUCTIONS.md` and `.codex/AGENTS.md` are repository aliases. Read `.agents/instruction-layout/README.md` before changing them; use `just instructions` for scoped installation and `just check-instructions` for verification. Edit the resolved submodule source, never replace a home alias with a regular file. Keep the generic installer in this repo and personal instruction contents in the submodule.
 - Machine-specific settings use `*.local` pattern (`.zshrc.local`, `*.local.json`) - never symlinked
 - Always verify changes with `just check` (or `./scripts/check`)
 - Maintain macOS compatibility with Homebrew-installed dependencies

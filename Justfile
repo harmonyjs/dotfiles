@@ -22,6 +22,18 @@ post-install *ARGS:
 check *ARGS:
     ./scripts/check {{ARGS}}
 
+# Restore shared global instruction links through a scoped Stow operation
+instructions *ARGS:
+    ./scripts/instructions {{ARGS}}
+
+# Check global instruction links without checking the rest of the machine
+check-instructions:
+    python3 .agents/instruction-layout/check.py
+
+# Exercise Stow installation and conflict handling in temporary homes
+test-instructions:
+    python3 scripts/tests/instructions.test.py
+
 # Update dotfiles from remote
 update *ARGS:
     ./scripts/update {{ARGS}}

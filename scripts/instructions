@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Restore only shared global instruction links; preserve unrelated configuration.
+set -euo pipefail
+
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+target="$HOME"
+dry_run=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry-run) dry_run=true; shift ;;
+        --target)
+            [[ $# -ge 2 ]] || { echo "--target requires a directory" >&2; exit 2; }
+            target="$2"; shift 2 ;;
+        -h|--help)
+            echo "Usage: scripts/instructions [--dry-run] [--target <existing-home-dir>]"
+            exit 0 ;;
+        *) echo "Unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
+
+[[ -d "$target" ]] || { echo "Target directory does not exist: $target" >&2; exit 1; }
+[[ -f "$repo/.claude/CLAUDE.md" && ! -L "$repo/.claude/CLAUDE.md" ]] || {
+    echo "Initialize the .claude submodule; its CLAUDE.md must be a regular source file." >&2
+    exit 1
+}
+
+# Stow CLI ignore patterns see target-relative paths and append an end anchor;
+# consume the excluded path after the lookahead so the end anchor can match.
+# Include the five files and their parent directories; everything else is ignored.
+ignore='^(?!(?:\.claude(?:/CLAUDE\.md)?|\.codex(?:/AGENTS\.md)?|\.agents(?:/INSTRUCTIONS\.md|/instruction-layout(?:/(?:check\.py|README\.md))?)?)$).*'
+stow --no -v -t "$target" --no-folding -d "$repo" --ignore="$ignore" .
+if [[ "$dry_run" == true ]]; then
+    exit 0
+fi
+stow -v -t "$target" --no-folding -d "$repo" --ignore="$ignore" .
+python3 "$repo/.agents/instruction-layout/check.py" --home "$target"

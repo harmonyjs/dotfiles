@@ -10,9 +10,11 @@ projects
 \.gitignore
 \.gitattributes
 \.gitmodules
-README\.md
+# Preserve README exclusions except the installed instruction-layout guide.
+^/(?!\.agents/instruction-layout/README\.md$)(.*/)?README\.md$
 LICENSE
-AGENTS\.md
+# Codex's global instruction alias is installed; other AGENTS.md files stay local.
+^/(?!\.codex/AGENTS\.md$)(.*/)?AGENTS\.md$
 # leading-slash anchors to package root: ignore repo-root CLAUDE.md only,
 # so nested .claude/CLAUDE.md (the global Finch instructions) DOES get stowed into ~/.claude/
 ^/CLAUDE\.md$

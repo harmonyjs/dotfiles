@@ -86,6 +86,15 @@ print_section_result() {
 }
 
 # -----------------------------------------------------------------------------
+# Shared global instructions (independent of package checks)
+# -----------------------------------------------------------------------------
+instructions_result="0/1"
+if python3 "$DOTFILES_DIR/.agents/instruction-layout/check.py"; then
+    instructions_result="1/1"
+fi
+print_section_result "Agent instructions" "$instructions_result"
+
+# -----------------------------------------------------------------------------
 # Brewfile
 # -----------------------------------------------------------------------------
 if [[ "$VERBOSE" == "true" ]]; then

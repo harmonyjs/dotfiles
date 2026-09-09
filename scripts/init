@@ -128,6 +128,15 @@ if ! ensure_all_symlinks; then
     ((failed++))
 fi
 
+# Run even when the core shell links already exist.
+instruction_command=("$SCRIPT_DIR/instructions")
+if [[ "$DRY_RUN" == "true" ]]; then
+    instruction_command+=(--dry-run)
+fi
+if ! "${instruction_command[@]}"; then
+    failed=$((failed + 1))
+fi
+
 # Memory links (repo-backed dir symlinks; self-healing, captures drift)
 if ! link_memory; then
     ((failed++))

@@ -72,6 +72,8 @@ What `bootstrap` does:
 | `just init` | Initialize or repair setup (idempotent) |
 | `just post-install` | One-time system tweaks (TouchID, known_hosts, hostname) |
 | `just check` | Verify configuration |
+| `just instructions` | Restore shared Claude Code / Codex instruction links |
+| `just check-instructions` | Verify shared instructions independently |
 | `just preview` | Preview what init would do |
 | `just update` | Pull latest updates |
 | `just stow` | Apply symlinks via stow |
@@ -114,7 +116,8 @@ just init --dry-run     # Same as just preview
 - `.config/starship.toml` - Starship prompt configuration
 - `.zshrc` - ZSH configuration (sources `.zsh_aliases` and `.zshrc.local`)
 - `.zsh_aliases` - Useful shell aliases
-- `.claude/` - Git submodule with Claude Code configurations
+- `.claude/` - Git submodule with Claude Code configurations and the shared global instructions for Claude Code / Codex
+- `.agents/instruction-layout/` - [Shared instruction layout](.agents/instruction-layout/README.md), restored through `just instructions`; `.codex/AGENTS.md` and `.agents/INSTRUCTIONS.md` alias the submodule source
 - `.private/` - Optional git submodule for private configurations (includes `.config/git/config`)
 
 ### ZSH Configuration Files
