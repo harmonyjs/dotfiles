@@ -50,6 +50,8 @@ Personal macOS terminal environment: tmux + Alacritty with Catppuccin Latte them
 - `.zshrc.local`, `.zsh_history` - per-machine shell state
 - `.codex/config.toml`, `.gemini/settings.json` - AI assistant per-tool configs
 - `.config/imgcluster/.env`, `.config/tg-exporter/.env`, `.config/kcat.conf` - service-specific env/configs
+- `.agents/skills/` - the personal skill catalog, reached through the `~/.agents/skills` directory symlink rather than stow (see Stow exceptions below); private because the skills name clients, internal projects and this machine
+- `.local/bin/{simreap,memwatch,janitor}`, `Library/LaunchAgents/dev.vavilov.*.plist`, `.local/share/clickhouse-ci-config/` - this machine's maintenance agents and the config they install
 
 **Public-vs-private rule:** anything that contains hostnames, public keys, email addresses, identity, credentials, or paths meaningful only to Andrey's specific machines belongs in `.private/`. The public tree is for curated tool choices and universal patterns that anyone can fork.
 
@@ -111,4 +113,4 @@ ZSH files have strict separation of concerns. Follow these rules when modifying 
 - Always use stow for symlink management
 - Create backups before config modifications
 - NEVER create symlinks manually, stow has to manage them
-- **Stow exception (memory only):** `scripts/lib/memory.sh` is a second, deliberate symlink manager beside stow — declarative and idempotent, not ad-hoc. Stow stays the source of truth for static config; `link_memory` owns the `projects/*/memory` directory symlinks. This is the one sanctioned place symlinks are not created by stow.
+- **Stow exceptions (runtime-written trees):** stow is the source of truth for static config, which it links *from* the repo *into* `~`. Two trees run the other way — they are written at runtime and have to land in the working tree as they are written — and each is owned by a single directory symlink instead. `scripts/lib/memory.sh:link_memory` owns `~/.claude/projects/*/memory`; `~/.agents/skills` is a symlink to `.private/.agents/skills`, which is why `.agents` is in `.private/.stow-local-ignore`. Stow would also have mangled the skill catalog outright: `.stow-local-ignore` strips every `README.md` but one, and 58 of them are reference material inside the `cloudflare` and `turnstile-spin` skills. `.agents/skills/synced` is gitignored, being Claude's own managed sync directory with its own lifecycle. These two are the only sanctioned places symlinks are not created by stow; a third needs the same justification, not just convenience.

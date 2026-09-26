@@ -110,6 +110,39 @@ run_unstow() {
 }
 
 # =============================================================================
+# Private tree traversal
+# =============================================================================
+
+# Emit the null-separated list of .private files that stow is expected to link
+# individually into $HOME.
+#
+# The exclusions here have to mirror .private/.stow-local-ignore, and they used
+# to be spelled out separately in each caller, which is how they drifted: the
+# backup pass never learned about cloudflared. A directory left in by mistake
+# costs either 400 bogus "not a symlink" failures in the audit or a pass that
+# moves live files aside, so the list is defined once and both callers use it.
+#
+# .agents is deliberate rather than an oversight: ~/.agents/skills is a single
+# directory symlink into this submodule, so its files are reached through that
+# one link and must never be linked, backed up or audited one by one.
+find_private_stowed_files() {
+    local private_dir="$1"
+
+    find "$private_dir" -type f \
+        ! -path '*/.git/*' \
+        ! -name '.git' \
+        ! -name '.gitignore' \
+        ! -name '.gitattributes' \
+        ! -name '.stow-local-ignore' \
+        ! -name 'README.md' \
+        ! -name '*.backup.*' \
+        ! -path '*/scripts/*' \
+        ! -path '*/cloudflared/*' \
+        ! -path '*/.agents/*' \
+        -print0
+}
+
+# =============================================================================
 # Symlink Creation Functions
 # =============================================================================
 
@@ -228,16 +261,7 @@ ensure_private_symlinks() {
                 log_action "Backing up ~/$relpath..."
                 mv "$target" "$target.backup.$(date +%Y%m%d-%H%M%S)"
             fi
-        done < <(find "$private_dir" -type f \
-            ! -path '*/.git/*' \
-            ! -name '.git' \
-            ! -name '.gitignore' \
-            ! -name '.gitattributes' \
-            ! -name '.stow-local-ignore' \
-            ! -name 'README.md' \
-            ! -name '*.backup.*' \
-            ! -path '*/scripts/*' \
-            -print0)
+        done < <(find_private_stowed_files "$private_dir")
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -344,17 +368,7 @@ check_private_symlinks() {
         else
             log_error "$relpath — not a symlink"
         fi
-    done < <(find "$private_dir" -type f \
-        ! -path '*/.git/*' \
-        ! -name '.git' \
-        ! -name '.gitignore' \
-        ! -name '.gitattributes' \
-        ! -name '.stow-local-ignore' \
-        ! -name 'README.md' \
-        ! -name '*.backup.*' \
-        ! -path '*/scripts/*' \
-        ! -path '*/cloudflared/*' \
-        -print0)
+    done < <(find_private_stowed_files "$private_dir")
 
     echo "$passed/$total"
 }
