@@ -75,14 +75,13 @@ print_section_result() {
 
     read -r passed total <<< "$(parse_result "$result")"
 
-    ((total_passed += passed)) || true
-    ((total_checks += total)) || true
-
+    # Deliberately does not touch total_passed/total_checks/sections_failed. This
+    # function runs only when VERBOSE is off, while the sections accumulate
+    # unconditionally, so counting here too counted those sections twice.
     if [[ "$passed" -eq "$total" ]]; then
         printf "%-20s [%s] ${GREEN}✓${NC}\n" "$name" "$result"
     else
         printf "%-20s [%s] ${RED}✗${NC}\n" "$name" "$result"
-        ((sections_failed++)) || true
     fi
 }
 
@@ -94,6 +93,11 @@ if python3 "$DOTFILES_DIR/.agents/instruction-layout/check.py"; then
     instructions_result="1/1"
 fi
 print_section_result "Agent instructions" "$instructions_result"
+read -r passed total <<< "$(parse_result "$instructions_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
 
 # -----------------------------------------------------------------------------
 # Brewfile
@@ -354,6 +358,11 @@ if [[ "$VERBOSE" == "true" ]]; then
 fi
 memory_result=$(check_memory)
 print_section_result "Memory" "$memory_result"
+read -r passed total <<< "$(parse_result "$memory_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
 
 # -----------------------------------------------------------------------------
 # Skill Catalog
@@ -363,6 +372,11 @@ if [[ "$VERBOSE" == "true" ]]; then
 fi
 skills_result=$(check_skills)
 print_section_result "Skill catalog" "$skills_result"
+read -r passed total <<< "$(parse_result "$skills_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
 
 # -----------------------------------------------------------------------------
 # Tmux Config
