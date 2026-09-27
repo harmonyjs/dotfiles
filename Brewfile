@@ -57,7 +57,7 @@ brew "pre-commit"        # Framework for managing multi-language git pre-commit 
 
 # Security / Secrets
 brew "gnupg"                     # GnuPG for encryption (required for Doppler signature verification)
-tap "dopplerhq/cli"
+tap "dopplerhq/doppler"       # upstream renamed the tap from dopplerhq/cli
 brew "doppler"                   # Doppler CLI for secrets management
 brew "gitleaks"                  # Detect and prevent hardcoded secrets in git repos
 # 1Password desktop: install manually from https://1password.com/downloads
