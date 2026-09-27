@@ -24,7 +24,7 @@ ensure_remote_ssh() {
     fi
     # shellcheck source=/dev/null
     source "$REMOTE_SSH_SRC/remote-ssh.env"
-    : "${TUNNEL_ID:?}" "${ALIAS_IP:?}" "${OP_CERT_REF:?}" "${OP_CREDS_REF:?}"
+    : "${TUNNEL_ID:?}" "${ALIAS_IP:?}" "${OP_ACCOUNT:?}" "${OP_CERT_REF:?}" "${OP_CREDS_REF:?}"
 
     # 1. Tooling.
     if ! command -v cloudflared &>/dev/null; then
@@ -48,6 +48,10 @@ ensure_remote_ssh() {
         log_warning "Remote SSH — op not signed in; skipping secret restore + daemon. Run: op signin && ./scripts/post-install"
         return 0
     fi
+    if ! op account list 2>/dev/null | grep -q "$OP_ACCOUNT"; then
+        log_warning "Remote SSH — op has no session for $OP_ACCOUNT; skipping secret restore + daemon. Run: op signin --account $OP_ACCOUNT"
+        return 0
+    fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_warning "Remote SSH — would restore secrets from 1Password and install daemons/config"
@@ -56,7 +60,11 @@ ensure_remote_ssh() {
 
     # 4. cert.pem (management/check use) into the user dir.
     mkdir -p "$HOME/.cloudflared"
-    op read "$OP_CERT_REF" > "$HOME/.cloudflared/cert.pem"
+    if ! op read --account "$OP_ACCOUNT" "$OP_CERT_REF" > "$HOME/.cloudflared/cert.pem"; then
+        rm -f "$HOME/.cloudflared/cert.pem"
+        log_warning "Remote SSH — could not read $OP_CERT_REF from $OP_ACCOUNT; skipping"
+        return 0
+    fi
     chmod 600 "$HOME/.cloudflared/cert.pem"
 
     # Everything below needs root.
@@ -68,7 +76,10 @@ ensure_remote_ssh() {
     # 5. /etc/cloudflared: config + credentials (secret straight from 1Password to root file).
     sudo install -d -m 755 /etc/cloudflared
     sudo install -m 644 "$REMOTE_SSH_SRC/config.yml" /etc/cloudflared/config.yml
-    op read "$OP_CREDS_REF" | sudo tee "/etc/cloudflared/${TUNNEL_ID}.json" >/dev/null
+    if ! op read --account "$OP_ACCOUNT" "$OP_CREDS_REF" | sudo tee "/etc/cloudflared/${TUNNEL_ID}.json" >/dev/null; then
+        log_warning "Remote SSH — could not read $OP_CREDS_REF from $OP_ACCOUNT; skipping"
+        return 0
+    fi
     sudo chown root:wheel "/etc/cloudflared/${TUNNEL_ID}.json"
     sudo chmod 600 "/etc/cloudflared/${TUNNEL_ID}.json"
 
