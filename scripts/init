@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/lib/deps.sh"
 source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
 source "$SCRIPT_DIR/lib/memory.sh"
+source "$SCRIPT_DIR/lib/skills.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
 source "$SCRIPT_DIR/lib/dock.sh"
 source "$SCRIPT_DIR/lib/git.sh"
@@ -69,18 +70,18 @@ ensure_brew
 log_section "Dependencies"
 
 if ! ensure_all_dependencies; then
-    ((failed++))
+    ((failed++)) || true
 fi
 
 # Rustup (installed via official script, not Homebrew)
 activate_cargo
 if ! ensure_rustup; then
-    ((failed++))
+    ((failed++)) || true
 fi
 
 # Yandex Cloud CLI (installed via official script, not Homebrew)
 if ! ensure_yc; then
-    ((failed++))
+    ((failed++)) || true
 fi
 
 # -----------------------------------------------------------------------------
@@ -88,7 +89,7 @@ fi
 # -----------------------------------------------------------------------------
 log_section "Submodules"
 if ! ensure_all_submodules; then
-    ((failed++))
+    ((failed++)) || true
 fi
 
 # -----------------------------------------------------------------------------
@@ -120,12 +121,12 @@ log_section "Setup"
 
 # TPM
 if ! ensure_tpm; then
-    ((failed++))
+    ((failed++)) || true
 fi
 
 # Symlinks
 if ! ensure_all_symlinks; then
-    ((failed++))
+    ((failed++)) || true
 fi
 
 # Run even when the core shell links already exist.
@@ -139,7 +140,13 @@ fi
 
 # Memory links (repo-backed dir symlinks; self-healing, captures drift)
 if ! link_memory; then
-    ((failed++))
+    ((failed++)) || true
+fi
+
+# Skill catalog (one repo-backed dir symlink; the reason a fresh clone gets the
+# skills at all, since stow deliberately does not own .agents)
+if ! link_skills; then
+    ((failed++)) || true
 fi
 
 # Load config (before plugins — TPM sets TMUX_PLUGIN_MANAGER_PATH on load)

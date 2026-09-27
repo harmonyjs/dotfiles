@@ -43,7 +43,7 @@ check_dock() {
 
     for app in "${DOCK_APPS[@]}"; do
         if check_dock_item "$app"; then
-            ((passed++))
+            ((passed++)) || true
             if [[ "$VERBOSE" == "true" ]]; then
                 log_success "$app in Dock"
             fi

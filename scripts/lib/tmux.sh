@@ -208,9 +208,9 @@ check_tmux_config() {
     local passed=0
 
     # Config loads without errors
-    ((total++))
+    ((total++)) || true
     if tmux_option -g prefix &>/dev/null; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Config loads without errors"
     else
         log_error "Config fails to load"
@@ -220,54 +220,54 @@ check_tmux_config() {
     fi
 
     # Prefix key
-    ((total++))
+    ((total++)) || true
     if tmux_option -g prefix | grep -q 'C-Space'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Prefix is C-Space"
     else
         log_error "Prefix is not C-Space"
     fi
 
     # Mouse support
-    ((total++))
+    ((total++)) || true
     if tmux_option -g mouse | grep -q 'on'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Mouse enabled"
     else
         log_error "Mouse disabled"
     fi
 
     # True color (check terminal-overrides for Tc flag)
-    ((total++))
+    ((total++)) || true
     if tmux_option -g terminal-overrides | grep -q 'Tc'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "True color support"
     else
         log_error "No true color support"
     fi
 
     # Vi mode
-    ((total++))
+    ((total++)) || true
     if tmux_option -gw mode-keys | grep -q 'vi'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Vi mode enabled"
     else
         log_error "Vi mode disabled"
     fi
 
     # Base index
-    ((total++))
+    ((total++)) || true
     if tmux_option -g base-index | grep -q '1$'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Windows start at 1"
     else
         log_error "Windows don't start at 1"
     fi
 
     # Renumber windows
-    ((total++))
+    ((total++)) || true
     if tmux_option -g renumber-windows | grep -q 'on'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Window renumbering enabled"
     else
         log_error "Window renumbering disabled"
@@ -282,9 +282,9 @@ check_plugins() {
     local passed=0
 
     # TPM
-    ((total++))
+    ((total++)) || true
     if is_tpm_installed; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "TPM installed"
     else
         log_error "TPM not installed"
@@ -296,9 +296,9 @@ check_plugins() {
     local plugins=() plugin
     while IFS= read -r plugin; do plugins+=("$plugin"); done < <(plugins_from_conf)
     for plugin in ${plugins[@]+"${plugins[@]}"}; do
-        ((total++))
+        ((total++)) || true
         if is_plugin_installed "$plugin"; then
-            ((passed++))
+            ((passed++)) || true
             [[ "$VERBOSE" == "true" ]] && log_success "$plugin installed"
         else
             log_error "$plugin not installed"
@@ -314,36 +314,36 @@ check_keybindings() {
     local passed=0
 
     # Prefix binding
-    ((total++))
+    ((total++)) || true
     if tmux list-keys -T prefix 2>/dev/null | grep -q 'C-Space.*send-prefix'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "C-Space prefix binding"
     else
         log_error "C-Space prefix binding missing"
     fi
 
     # Vim navigation
-    ((total++))
+    ((total++)) || true
     if tmux list-keys -T root 2>/dev/null | grep -q 'C-h.*select-pane -L'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Vim navigation (C-h)"
     else
         log_error "Vim navigation missing"
     fi
 
     # Shift+Arrow windows
-    ((total++))
+    ((total++)) || true
     if tmux list-keys -T root 2>/dev/null | grep -q 'S-Left.*previous-window'; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Shift+Arrow windows"
     else
         log_error "Shift+Arrow windows missing"
     fi
 
     # Copy mode bindings
-    ((total++))
+    ((total++)) || true
     if tmux list-keys -T copy-mode-vi 2>/dev/null | grep -E 'v .*begin-selection|y .*copy-selection' >/dev/null; then
-        ((passed++))
+        ((passed++)) || true
         [[ "$VERBOSE" == "true" ]] && log_success "Copy mode bindings"
     else
         log_error "Copy mode bindings missing"

@@ -288,11 +288,11 @@ ensure_all_symlinks() {
     local failed=0
 
     if ! ensure_main_symlinks; then
-        ((failed++))
+        ((failed++)) || true
     fi
 
     if ! ensure_starship_symlink; then
-        ((failed++))
+        ((failed++)) || true
     fi
 
     ensure_private_symlinks  # Always succeeds (optional)
@@ -311,9 +311,9 @@ check_all_symlinks() {
 
     # Main symlinks
     for symlink in "${MAIN_SYMLINKS[@]}"; do
-        ((total++))
+        ((total++)) || true
         if is_symlink_valid "$symlink"; then
-            ((passed++))
+            ((passed++)) || true
             if [[ "$VERBOSE" == "true" ]]; then
                 log_success "$symlink"
             fi
@@ -324,9 +324,9 @@ check_all_symlinks() {
 
     # Config symlinks
     for symlink in "${CONFIG_SYMLINKS[@]}"; do
-        ((total++))
+        ((total++)) || true
         if is_symlink_valid "$symlink"; then
-            ((passed++))
+            ((passed++)) || true
             if [[ "$VERBOSE" == "true" ]]; then
                 log_success "$symlink"
             fi
@@ -352,13 +352,13 @@ check_private_symlinks() {
     while IFS= read -r -d '' file; do
         local relpath="${file#$private_dir/}"
         local target="$HOME/$relpath"
-        ((total++))
+        ((total++)) || true
 
         if [[ -L "$target" ]]; then
             local link_target
             link_target=$(readlink "$target")
             if [[ "$link_target" == *".private"* ]]; then
-                ((passed++))
+                ((passed++)) || true
                 if [[ "$VERBOSE" == "true" ]]; then
                     log_success "$relpath"
                 fi

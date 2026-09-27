@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/lib/deps.sh"
 source "$SCRIPT_DIR/lib/submodules.sh"
 source "$SCRIPT_DIR/lib/symlinks.sh"
 source "$SCRIPT_DIR/lib/memory.sh"
+source "$SCRIPT_DIR/lib/skills.sh"
 source "$SCRIPT_DIR/lib/tmux.sh"
 source "$SCRIPT_DIR/lib/dock.sh"
 source "$SCRIPT_DIR/lib/git.sh"
@@ -180,7 +181,7 @@ yc_passed=0
 yc_total=1
 
 if check_yc; then
-    ((yc_passed++))
+    ((yc_passed++)) || true
     if [[ "$VERBOSE" == "true" ]]; then
         version=$(yc version 2>/dev/null | head -1 | awk '{print $4}')
         log_success "yc ($version)"
@@ -216,9 +217,9 @@ shell_total=0
 
 # fzf
 if check_dependency fzf; then
-    ((shell_total++))
+    ((shell_total++)) || true
     if check_fzf_shell; then
-        ((shell_passed++))
+        ((shell_passed++)) || true
         if [[ "$VERBOSE" == "true" ]]; then
             log_success "fzf shell integration"
         fi
@@ -256,9 +257,9 @@ corepack_total=0
 activate_fnm
 if command -v node &>/dev/null; then
     for shim in yarn pnpm; do
-        ((corepack_total++))
+        ((corepack_total++)) || true
         if is_corepack_shim "$shim"; then
-            ((corepack_passed++))
+            ((corepack_passed++)) || true
             if [[ "$VERBOSE" == "true" ]]; then
                 version=$("$shim" --version 2>/dev/null)
                 log_success "$shim ($version)"
@@ -353,6 +354,15 @@ if [[ "$VERBOSE" == "true" ]]; then
 fi
 memory_result=$(check_memory)
 print_section_result "Memory" "$memory_result"
+
+# -----------------------------------------------------------------------------
+# Skill Catalog
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Skill catalog"
+fi
+skills_result=$(check_skills)
+print_section_result "Skill catalog" "$skills_result"
 
 # -----------------------------------------------------------------------------
 # Tmux Config

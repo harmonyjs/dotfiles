@@ -189,13 +189,13 @@ ensure_all_dependencies() {
     # Use Brewfile if available
     if [[ -f "$BREWFILE" ]]; then
         if ! ensure_brewfile; then
-            ((failed++))
+            ((failed++)) || true
         fi
     else
         # Fallback to individual installs
         for dep in "${REQUIRED_DEPS[@]}"; do
             if ! ensure_dependency "$dep"; then
-                ((failed++))
+                ((failed++)) || true
             fi
         done
     fi

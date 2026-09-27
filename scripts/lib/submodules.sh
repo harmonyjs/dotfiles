@@ -121,7 +121,7 @@ ensure_all_submodules() {
     # Required submodules
     for submodule in "${REQUIRED_SUBMODULES[@]}"; do
         if ! ensure_submodule "$submodule" false; then
-            ((failed++))
+            ((failed++)) || true
         fi
     done
 
@@ -172,7 +172,7 @@ update_all_submodules() {
                 local count
                 count=$(cd "$DOTFILES_DIR/$submodule" && git rev-list --count "$before".."$after" 2>/dev/null || echo "?")
                 log_success "$submodule updated ($count commits)"
-                ((updated++))
+                ((updated++)) || true
             else
                 log_success "$submodule up to date"
             fi
@@ -192,9 +192,9 @@ check_all_submodules() {
     local passed=0
 
     for submodule in "${REQUIRED_SUBMODULES[@]}"; do
-        ((total++))
+        ((total++)) || true
         if is_submodule_initialized "$submodule"; then
-            ((passed++))
+            ((passed++)) || true
             if [[ "$VERBOSE" == "true" ]]; then
                 log_success "$submodule"
             fi
