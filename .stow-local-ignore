@@ -26,6 +26,10 @@ Justfile
 # explicitly or stow tries to symlink every one it finds and aborts on conflict.
 \.DS_Store
 
+# Python writes bytecode beside a hook wherever it is imported from, so ~ grows its
+# own copy and the next restow aborts on it.
+__pycache__
+
 # Local configuration files
 .*\.local\.json
 \.zshrc\.local
