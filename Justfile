@@ -66,6 +66,10 @@ test-commit-guide:
 test-stop-ask:
     bash .claude/hooks/stop-ask-user.test.sh
 
+# Run zsh-colon-modifier-guard hook tests
+test-zsh-colon:
+    python3 .claude/hooks/zsh-colon-modifier-guard.test.py
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
