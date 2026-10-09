@@ -338,6 +338,24 @@ check_all_symlinks() {
     echo "$passed/$total"
 }
 
+# Stow aborts the whole run on one conflicting path, so the fixed list above stays green
+# while nothing new reaches $HOME. Ask stow itself whether a restow would go through.
+check_stow_dry_run() {
+    local target="${1:-$HOME}"
+    local out
+
+    if out=$(cd "$DOTFILES_DIR" && stow --restow --no-folding --simulate -t "$target" . 2>&1); then
+        if [[ "$VERBOSE" == "true" ]]; then
+            log_success "stow --restow would succeed"
+        fi
+        echo "1/1"
+    else
+        log_error "stow --restow would abort; move the stray file aside or ignore its path in .stow-local-ignore:"
+        printf '%s\n' "$out" | grep -E '^[[:space:]]+\*' >&2 || printf '%s\n' "$out" >&2
+        echo "0/1"
+    fi
+}
+
 # Check private symlinks
 check_private_symlinks() {
     local private_dir="$DOTFILES_DIR/.private"

@@ -58,6 +58,10 @@ memory:
 test-memory:
     bash scripts/tests/memory.test.sh
 
+# Run stow dry-run check tests
+test-stow-check:
+    bash scripts/tests/stow-check.test.sh
+
 # Run commit-pr-guide hook tests
 test-commit-guide:
     bash .claude/hooks/commit-pr-guide.test.sh

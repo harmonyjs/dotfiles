@@ -351,6 +351,25 @@ read -r passed total <<< "$(parse_result "$symlinks_result")"
 [[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
 
 # -----------------------------------------------------------------------------
+# Stow dry run
+# -----------------------------------------------------------------------------
+if [[ "$VERBOSE" == "true" ]]; then
+    log_section "Stow dry run"
+fi
+
+stow_result=$(check_stow_dry_run)
+if [[ "$VERBOSE" != "true" ]]; then
+    print_section_result "Stow dry run" "$stow_result"
+else
+    echo
+fi
+
+read -r passed total <<< "$(parse_result "$stow_result")"
+((total_passed += passed)) || true
+((total_checks += total)) || true
+[[ "$passed" -ne "$total" ]] && ((sections_failed++)) || true
+
+# -----------------------------------------------------------------------------
 # Memory
 # -----------------------------------------------------------------------------
 if [[ "$VERBOSE" == "true" ]]; then
