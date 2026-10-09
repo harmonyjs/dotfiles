@@ -209,29 +209,17 @@ ensure_starship_symlink() {
 # Main Symlink Functions
 # =============================================================================
 
-# Create all main symlinks via stow
+# Create all main symlinks via stow. Runs every time: the shell links being present says
+# nothing about files added to the repo since the last stow.
 ensure_main_symlinks() {
-    # Check if already done
-    local all_valid=true
-    for symlink in "${MAIN_SYMLINKS[@]}"; do
-        if ! is_symlink_valid "$symlink"; then
-            all_valid=false
-            break
-        fi
-    done
-
-    if [[ "$all_valid" == "true" ]]; then
-        log_success "Main symlinks"
-        return 0
-    fi
-
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_warning "Main symlinks — would create via stow"
+        if [[ "$(check_stow_dry_run 2>/dev/null)" == "1/1" ]]; then
+            log_success "Main symlinks"
+        else
+            log_warning "Main symlinks — would stow"
+        fi
         return 0
     fi
-
-    log_warning "Main symlinks missing"
-    log_action "Creating via stow..."
 
     if run_stow; then
         log_success "Main symlinks"
@@ -338,22 +326,34 @@ check_all_symlinks() {
     echo "$passed/$total"
 }
 
-# Stow aborts the whole run on one conflicting path, so the fixed list above stays green
-# while nothing new reaches $HOME. Ask stow itself whether a restow would go through.
+# The fixed list above sees neither a conflict, which aborts the whole stow run, nor a
+# file added since the last stow. Ask stow itself what a restow would do.
 check_stow_dry_run() {
     local target="${1:-$HOME}"
-    local out
+    local out pending
 
-    if out=$(cd "$DOTFILES_DIR" && stow --restow --no-folding --simulate -t "$target" . 2>&1); then
-        if [[ "$VERBOSE" == "true" ]]; then
-            log_success "stow --restow would succeed"
-        fi
-        echo "1/1"
-    else
+    if ! out=$(cd "$DOTFILES_DIR" && stow --restow --no-folding --simulate -v -t "$target" . 2>&1); then
         log_error "stow --restow would abort; move the stray file aside or ignore its path in .stow-local-ignore:"
         printf '%s\n' "$out" | grep -E '^[[:space:]]+\*' >&2 || printf '%s\n' "$out" >&2
         echo "0/1"
+        return 0
     fi
+
+    # A restow unlinks and relinks every delivered file, so a LINK without its UNLINK is new.
+    pending=$(comm -23 \
+        <(printf '%s\n' "$out" | sed -n 's/^LINK: \(.*\) => .*/\1/p' | sort -u) \
+        <(printf '%s\n' "$out" | sed -n 's/^UNLINK: //p' | sort -u))
+    if [[ -n "$pending" ]]; then
+        log_error "$(printf '%s\n' "$pending" | wc -l | tr -d ' ') file(s) not linked into $target yet; run 'just stow':"
+        printf '%s\n' "$pending" | sed -n '1,20s/^/  /p' >&2
+        echo "0/1"
+        return 0
+    fi
+
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_success "every file is linked and a restow would go through"
+    fi
+    echo "1/1"
 }
 
 # Check private symlinks
