@@ -74,6 +74,10 @@ test-stop-ask:
 test-zsh-colon:
     python3 .claude/hooks/zsh-colon-modifier-guard.test.py
 
+# Run merge-attribution-guard hook tests
+test-merge-attribution:
+    python3 .claude/hooks/merge-attribution-guard.test.py
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
