@@ -8,10 +8,24 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# Encode an absolute project path to Claude Code's project-id (slash & dot -> dash).
+# Encode an absolute project path to Claude Code's project-id. Mirrors its JS sanitizer, which
+# works on UTF-16 code units: every non-[a-zA-Z0-9] unit -> "-"; past 200, cut and append a base36 hash.
 memory_project_id() {
     local path="${1%/}"
-    printf '%s' "$path" | sed 's#[./]#-#g'
+    perl -e '
+        my $p = shift; utf8::decode($p);
+        my @u = map { my $c = ord; $c > 0xFFFF ? (0xD800 + (($c - 0x10000) >> 10), 0xDC00 + (($c - 0x10000) & 0x3FF)) : $c } split //, $p;
+        my $id = join "", map { ($_ >= 48 && $_ <= 57) || ($_ >= 65 && $_ <= 90) || ($_ >= 97 && $_ <= 122) ? chr : "-" } @u;
+        if (length $id > 200) {
+            my $h = 0;
+            $h = ($h * 31 + $_) % 4294967296 for @u;
+            $h = 4294967296 - $h if $h >= 2147483648;
+            my $b = "";
+            do { $b = (0 .. 9, "a" .. "z")[$h % 36] . $b; $h = int($h / 36) } while $h;
+            $id = substr($id, 0, 200) . "-$b";
+        }
+        print $id;
+    ' -- "$path"
 }
 
 # Normalize one project's memory dir to a repo-backed directory symlink.

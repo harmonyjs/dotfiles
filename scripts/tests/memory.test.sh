@@ -27,6 +27,17 @@ ok "id: slash+dot -> dash" \
   '[[ "$(memory_project_id /Users/a/GitHub/vavilova.dev)" == "-Users-a-GitHub-vavilova-dev" ]]'
 ok "id: strips trailing slash" \
   '[[ "$(memory_project_id /Users/a/x/)" == "-Users-a-x" ]]'
+ok "id: space -> dash" \
+  '[[ "$(memory_project_id "/Users/a/Library/Application Support/Claude/x")" == "-Users-a-Library-Application-Support-Claude-x" ]]'
+ok "id: tilde and underscore -> dash" \
+  '[[ "$(memory_project_id "/Users/a/Mobile Documents/com~apple~Docs/gk_xw")" == "-Users-a-Mobile-Documents-com-apple-Docs-gk-xw" ]]'
+ok "id: one dash per UTF-16 code unit" \
+  '[[ "$(memory_project_id "/Users/a/Проекты/😀")" == "-Users-a-----------" ]]'
+rep() { local s="" i; for ((i = 0; i < $2; i++)); do s+="$1"; done; printf '%s' "$s"; }
+ok "id: over 200 chars -> cut + base36 hash" \
+  '[[ "$(memory_project_id "/Users/a/$(rep x/ 100)y")" == "-Users-a-$(rep x- 95)x-7uc0fb" ]]'
+ok "id: over 200 chars, non-ASCII hashed as UTF-16" \
+  '[[ "$(memory_project_id "/Users/a/$(rep Проект/ 30)😀")" == "-Users-a-$(rep - 191)-ysebqf" ]]'
 teardown
 
 # --- state A: real-only files migrate into repo, dir becomes symlink ---
