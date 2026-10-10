@@ -40,3 +40,7 @@ __pycache__
 # Skills moved to .agents/skills; ~/.claude/skills is a directory symlink owned by
 # skill-layout, so stowing this stale copy over it aborts the whole run.
 ^/\.claude/skills$
+
+# Claude Code session worktrees: each is a whole checkout of this repo, so stowing it
+# would link a second copy of every dotfile under ~/.claude/worktrees.
+^/\.claude/worktrees$
