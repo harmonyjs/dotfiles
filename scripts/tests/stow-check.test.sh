@@ -37,5 +37,15 @@ rm "$T/$HOOK"; printf x > "$T/$HOOK"
 ok "plain file in place of a hook: red"    '[[ "$(verdict)" == "0/1" ]]'
 ok "conflict names the path"               '[[ "$(complaint)" == *"cannot stow"*"$HOOK"* ]]'
 
+# Claude Code checks session worktrees out inside the package, each a full copy of the repo.
+P="$T/pkg"; W="$T/wt-home"
+mkdir -p "$P/.claude/worktrees/x" "$W"
+cp "$REPO_ROOT/.stow-local-ignore" "$P/"
+printf x > "$P/.zshrc"; printf x > "$P/.claude/worktrees/x/.zshrc"
+DOTFILES_DIR="$P"; export HOME="$W"
+ok "worktree file not reported"            '[[ "$(check_stow_dry_run "$W" 2>&1 >/dev/null)" == *.zshrc* && "$(check_stow_dry_run "$W" 2>&1 >/dev/null)" != *worktrees* ]]'
+ensure_main_symlinks >/dev/null 2>&1
+ok "worktree file not linked"              '[[ -L "$W/.zshrc" && ! -e "$W/.claude/worktrees" && "$(check_stow_dry_run "$W" 2>/dev/null)" == "1/1" ]]'
+
 echo "  $pass passed, $fail failed"
 [[ $fail -eq 0 ]]
