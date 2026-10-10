@@ -28,10 +28,17 @@ memory_project_id() {
     ' -- "$path"
 }
 
+# Claude desktop scratch workspaces get a fresh directory, and so a fresh id, per session.
+# Their memory stays in ~ and goes away with the workspace.
+memory_id_ephemeral() {
+    [[ "$1" == *-Library-Application-Support-Claude-scratch-workspaces-* ]]
+}
+
 # Normalize one project's memory dir to a repo-backed directory symlink.
 # Handles: already-linked (no-op), real-only, per-file symlinks, mixed, absent.
 link_memory_id() {
     local id="$1"
+    memory_id_ephemeral "$id" && return 0
     local home_mem="$HOME/.claude/projects/$id/memory"
     local repo_mem="$DOTFILES_DIR/.claude/projects/$id/memory"
 
@@ -148,8 +155,9 @@ check_memory() {
     [[ -d "$home_root" ]] || { echo "0/0"; return 0; }
     for d in "$home_root"/*/memory; do
         [[ -e "$d" || -L "$d" ]] || continue
-        ((total++)) || true
         id="$(basename "$(dirname "$d")")"
+        memory_id_ephemeral "$id" && continue
+        ((total++)) || true
         repo_mem="$DOTFILES_DIR/.claude/projects/$id/memory"
         if [[ -L "$d" && "$(readlink "$d")" == "$repo_mem" ]]; then
             ((passed++)) || true

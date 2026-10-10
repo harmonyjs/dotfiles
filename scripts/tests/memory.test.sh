@@ -152,6 +152,23 @@ res="$(check_memory)"
 ok "status: 1 of 2 repo-backed" '[[ "$res" == "1/2" ]]'
 teardown
 
+# --- ephemeral: Claude desktop scratch workspaces stay local, never repo-backed ---
+setup
+scratch="/Users/a/Library/Application Support/Claude/scratch-workspaces/u1/u2/scratch-2026-01-01-abc123"
+sid="$(memory_project_id "$scratch")"
+link_memory_project "$scratch"; rc=$?
+ok "scratch: hook path returns success" '[[ "$rc" -eq 0 ]]'
+ok "scratch: hook creates no repo dir"  '[[ ! -e "$DOTFILES_DIR/.claude/projects/$sid" ]]'
+ok "scratch: hook creates no home link" '[[ ! -L "$HOME/.claude/projects/$sid/memory" ]]'
+mkdir -p "$HOME/.claude/projects/$sid/memory"
+printf 'S' > "$HOME/.claude/projects/$sid/memory/s.md"
+link_memory
+ok "scratch: link_memory leaves real dir" '[[ -d "$HOME/.claude/projects/$sid/memory" && ! -L "$HOME/.claude/projects/$sid/memory" ]]'
+ok "scratch: file not moved to repo"      '[[ ! -e "$DOTFILES_DIR/.claude/projects/$sid" ]]'
+res="$(check_memory 2>/dev/null)"
+ok "scratch: not counted by check" '[[ "$res" == "0/0" ]]'
+teardown
+
 echo "---"
 echo "passed=$pass failed=$fail"
 [[ "$fail" -eq 0 ]]
