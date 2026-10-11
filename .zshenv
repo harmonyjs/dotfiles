@@ -27,3 +27,11 @@ unset _proxy _no_proxy
 
 # 1Password SSH Agent
 export SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+
+# Agent shell commands
+# ═══════════════════════════════════════════════════════════════════
+# Claude Code and Codex run each command as `zsh -c`/`-lc` and their agents write bash, so those
+# shells split words and keep `=x` and unmatched globs; zsh script files and interactive shells do not.
+if [[ -n $ZSH_EXECUTION_STRING && ! -o interactive && -n $CLAUDECODE$CODEX_SHELL$CODEX_THREAD_ID ]]; then
+    setopt SH_WORD_SPLIT NO_EQUALS NO_NOMATCH
+fi
