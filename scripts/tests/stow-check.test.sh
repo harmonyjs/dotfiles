@@ -17,7 +17,7 @@ DRY_RUN=false
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 export HOME="$T"
-HOOK=.claude/hooks/zsh-colon-modifier-guard.py
+HOOK=.claude/hooks/zsh-bashism-guard.py
 verdict() { check_stow_dry_run "$T" 2>/dev/null; }
 complaint() { check_stow_dry_run "$T" 2>&1 >/dev/null; }
 

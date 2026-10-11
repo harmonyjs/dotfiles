@@ -83,6 +83,16 @@ bindkey "^[f" forward-word    # Option + Right (or Option + f)
 [[ ! -f ~/.zsh_aliases ]] || source ~/.zsh_aliases
 
 #
+# Claude Code Bash tool
+# #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+
+# Claude Code snapshots options from a non-interactive shell with CLAUDECODE=1 and replays them in
+# every Bash tool call. Agents write bash, so that shell splits words and keeps `=x` and unmatched globs.
+if [[ -n $CLAUDECODE && ! -o interactive ]]; then
+  setopt SH_WORD_SPLIT NO_EQUALS NO_NOMATCH
+fi
+
+#
 # Local Configuration
 # #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 

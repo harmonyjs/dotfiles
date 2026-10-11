@@ -70,9 +70,9 @@ test-commit-guide:
 test-stop-ask:
     bash .claude/hooks/stop-ask-user.test.sh
 
-# Run zsh-colon-modifier-guard hook tests
-test-zsh-colon:
-    python3 .claude/hooks/zsh-colon-modifier-guard.test.py
+# Run zsh-bashism-guard hook tests
+test-zsh-bashism:
+    python3 .claude/hooks/zsh-bashism-guard.test.py
 
 # Run merge-attribution-guard hook tests
 test-merge-attribution:
