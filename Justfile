@@ -78,6 +78,10 @@ test-zsh-bashism:
 test-merge-attribution:
     python3 .claude/hooks/merge-attribution-guard.test.py
 
+# Run terrateam-stale-merge-guard hook tests
+test-terrateam-stale-merge:
+    python3 .claude/hooks/terrateam-stale-merge-guard.test.py
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
