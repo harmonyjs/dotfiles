@@ -62,6 +62,10 @@ test-memory:
 test-stow-check:
     bash scripts/tests/stow-check.test.sh
 
+# Run session-start-stow hook tests
+test-session-start-stow:
+    bash .claude/hooks/session-start-stow.test.sh
+
 # Run commit-pr-guide hook tests
 test-commit-guide:
     bash .claude/hooks/commit-pr-guide.test.sh
