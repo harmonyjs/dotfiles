@@ -86,6 +86,10 @@ test-merge-attribution:
 test-terrateam-stale-merge:
     python3 .claude/hooks/terrateam-stale-merge-guard.test.py
 
+# Run gh-dashdash-guard hook tests
+test-gh-dashdash:
+    python3 .claude/hooks/gh-dashdash-guard.test.py
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
