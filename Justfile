@@ -74,6 +74,10 @@ test-commit-guide:
 test-stop-ask:
     bash .claude/hooks/stop-ask-user.test.sh
 
+# Run delegation-guard hook tests
+test-delegation-guard:
+    python3 .claude/hooks/delegation-guard.test.py
+
 # Run zsh-bashism-guard hook tests
 test-zsh-bashism:
     python3 .claude/hooks/zsh-bashism-guard.test.py
