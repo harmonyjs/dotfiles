@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delegation guard</title>
+<style>
+:root {
+  --bg: #ffffff; --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8983; --rule: #ececea;
+  --cleared: #2a78d6; --blocked: #eb6834;
+  --tip-bg: #0b0b0b; --tip-ink: #f0efec;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #8f8e85; --rule: #2e2e2c;
+    --cleared: #3987e5; --blocked: #d95926;
+    --tip-bg: #f0efec; --tip-ink: #0b0b0b;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 48px 16px 80px; }
+h1 { font-size: 26px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 15px; font-weight: 600; margin: 48px 0 12px; }
+.sub { color: var(--ink-2); margin: 0; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 28px 24px; margin-top: 36px; }
+.kpi b { display: block; font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15;
+  font-variant-numeric: tabular-nums; }
+.kpi span { display: block; color: var(--ink); margin-top: 4px; }
+.kpi small { display: block; color: var(--ink-3); font-size: 13px; }
+.legend { display: flex; gap: 16px; color: var(--ink-2); font-size: 13px; margin-bottom: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+svg { display: block; width: 100%; height: auto; }
+svg text { fill: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.day:hover rect.mark, .day:focus rect.mark { opacity: .75; }
+.day { outline: none; }
+#tip { position: fixed; display: none; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink);
+  padding: 6px 10px; border-radius: 6px; font-size: 13px; white-space: pre; z-index: 1; }
+table { width: 100%; border-collapse: collapse; }
+td, th { text-align: left; padding: 8px 12px 8px 0; border-top: 1px solid var(--rule); vertical-align: top; font-weight: 400; }
+th { color: var(--ink-3); font-size: 13px; border-top: 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: 0; }
+td.when { color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wrap { overflow-x: auto; }
+details { margin-top: 16px; color: var(--ink-2); }
+summary { cursor: pointer; font-size: 13px; }
+.empty { color: var(--ink-3); }
+</style></head><body><main>
+<h1>Delegation guard</h1>
+<p class="sub">Как часто агент пытается переложить работу на Андрея. {period}</p>
+<section class="kpis">{kpis}</section>
+<h2>Проверки моделью по дням</h2>
+{chart}
+<h2>Последние блоки</h2>
+{blocks}
+{errors}
+</main><div id="tip"></div>
+<script>
+const tip = document.getElementById('tip');
+document.querySelectorAll('.day').forEach(day => {
+  const show = (x, y) => {
+    tip.textContent = day.dataset.tip;
+    tip.style.display = 'block';
+    tip.style.left = Math.min(x + 12, innerWidth - tip.offsetWidth - 8) + 'px';
+    tip.style.top = (y + 12) + 'px';
+  };
+  day.addEventListener('pointermove', e => show(e.clientX, e.clientY));
+  day.addEventListener('focus', () => { const r = day.getBoundingClientRect(); show(r.left, r.top); });
+  ['pointerleave', 'blur'].forEach(ev => day.addEventListener(ev, () => { tip.style.display = 'none'; }));
+});
+</script></body></html>

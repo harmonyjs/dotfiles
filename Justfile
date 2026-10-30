@@ -77,6 +77,11 @@ test-stop-ask:
 # Run delegation-guard hook tests
 test-delegation-guard:
     python3 .claude/hooks/delegation-guard.test.py
+    python3 scripts/tests/delegation-guard-stats.test.py
+
+# Open the delegation-guard stats dashboard
+delegation-stats:
+    python3 scripts/delegation-guard-stats.py
 
 # Run zsh-bashism-guard hook tests
 test-zsh-bashism:
