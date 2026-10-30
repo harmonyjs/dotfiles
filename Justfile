@@ -83,6 +83,15 @@ test-delegation-guard:
 delegation-stats:
     python3 scripts/delegation-guard-stats.py
 
+# Open the portal with analytics for all Claude Code hooks
+hooks-portal:
+    python3 scripts/hooks-portal.py
+
+# Run hook-run wrapper and hooks portal tests
+test-hooks-portal:
+    bash .claude/hooks/hook-run.test.sh
+    python3 scripts/tests/hooks-portal.test.py
+
 # Run zsh-bashism-guard hook tests
 test-zsh-bashism:
     python3 .claude/hooks/zsh-bashism-guard.test.py

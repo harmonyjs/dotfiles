@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Delegation guard</title>
+<title>{title}</title>
 <style>
 :root {
   --bg: #ffffff; --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8983; --rule: #ececea;
@@ -44,13 +44,15 @@ td.when { color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabula
 details { margin-top: 16px; color: var(--ink-2); }
 summary { cursor: pointer; font-size: 13px; }
 .empty { color: var(--ink-3); }
+a { color: inherit; text-underline-offset: 2px; }
 </style></head><body><main>
-<h1>Delegation guard</h1>
-<p class="sub">Как часто агент пытается переложить работу на Андрея. {period}</p>
+<p class="sub">{back}</p>
+<h1>{title}</h1>
+<p class="sub">{period}</p>
 <section class="kpis">{kpis}</section>
-<h2>Проверки моделью по дням</h2>
+<h2>{chart_title}</h2>
 {chart}
-<h2>Последние блоки</h2>
+<h2>{blocks_title}</h2>
 {blocks}
 {errors}
 </main><div id="tip"></div>

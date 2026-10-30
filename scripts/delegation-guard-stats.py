@@ -111,7 +111,7 @@ def render_chart(events, today):
     width, height = BAR_AREA
     slot = width / DAYS
     bar = max(slot - 6, 2)
-    unit = (height - 24) / top
+    unit = (height - 36) / top
     base = height - 20
     parts = [f'<line x1="0" x2="{width}" y1="{base}" y2="{base}" stroke="var(--rule)"/>']
     parts.append(f'<text x="0" y="10">{top}</text>')
@@ -164,7 +164,7 @@ def render_errors(events):
     return f'<h2>Последние ошибки</h2><div class="wrap"><table>{"".join(rows)}</table></div>'
 
 
-def render(events, today):
+def render(events, today, back=""):
     summary = summarize(events)
     if events:
         first = datetime.fromtimestamp(min(e["at"] for e in events)).strftime("%d.%m.%Y")
@@ -172,7 +172,11 @@ def render(events, today):
     else:
         period = "Данных пока нет."
     replacements = {
-        "{period}": html.escape(period),
+        "{back}": back,
+        "{title}": "Delegation guard",
+        "{period}": html.escape("Как часто агент пытается переложить работу на Андрея. " + period),
+        "{chart_title}": "Проверки моделью по дням",
+        "{blocks_title}": "Последние блоки",
         "{kpis}": render_kpis(summary),
         "{chart}": render_chart(events, today),
         "{blocks}": render_blocks(events),
@@ -180,7 +184,7 @@ def render(events, today):
     }
     page = PAGE.read_text()
     for key, value in replacements.items():
-        page = page.replace(key, value, 1)
+        page = page.replace(key, value)
     return page
 
 
