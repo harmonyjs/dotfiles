@@ -108,6 +108,10 @@ test-terrateam-stale-merge:
 test-gh-dashdash:
     python3 .claude/hooks/gh-dashdash-guard.test.py
 
+# Run memory-search-nudge hook tests
+test-memory-search-nudge:
+    python3 .claude/hooks/memory-search-nudge.test.py
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
