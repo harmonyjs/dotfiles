@@ -112,6 +112,11 @@ test-gh-dashdash:
 test-memory-search-nudge:
     python3 .claude/hooks/memory-search-nudge.test.py
 
+# Run memguard, memcap and session-notices tests (one 50 MB process at a time against a 30 MB test limit)
+test-memguard:
+    taskpolicy -b /usr/bin/python3 -B .private/scripts/test_memguard.py
+    taskpolicy -b python3 .claude/hooks/session-notices.test.py
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
