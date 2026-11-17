@@ -117,6 +117,10 @@ test-memguard:
     taskpolicy -b /usr/bin/python3 -B .private/scripts/test_memguard.py
     taskpolicy -b python3 .claude/hooks/session-notices.test.py
 
+# Run janitor worktree-sweep tests against temporary repositories
+test-janitor:
+    /usr/bin/python3 -B .private/scripts/test_janitor_worktrees.py
+
 # Show symlink status
 stow-status:
     stow --no --verbose -t ~ . 2>&1 | grep -E "^(LINK|UNLINK|MV)" || echo "No changes needed"
